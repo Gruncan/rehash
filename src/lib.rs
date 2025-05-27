@@ -1,14 +1,38 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+
+mod utils;
+mod video_player;
+
+use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::prelude::wasm_bindgen;
+use web_sys::{HtmlElement, HtmlVideoElement};
+use crate::video_player::*;
+
+
+#[wasm_bindgen]
+pub struct WebVideoPlayer{
+    video_player: VideoPlayer<Uninitialized>
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[wasm_bindgen]
+impl WebVideoPlayer {
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    #[wasm_bindgen(constructor)]
+    pub fn new(video_element: HtmlVideoElement) -> Result<Self, JsValue> {
+        utils::set_panic_hook();
+
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+        let video_element = document.get_element_by_id("video-player")
+            .unwrap()
+            .dyn_into::<HtmlVideoElement>()?;
+
+        let raw = VideoPlayer::<Uninitialized>::new();
+
+        Ok(
+            WebVideoPlayer{
+                video_player: raw,
+            }
+        )
+
     }
 }
