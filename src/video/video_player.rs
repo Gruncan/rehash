@@ -2,6 +2,7 @@ use crate::prelude::*;
 use crate::video::video_internal::VideoInternal;
 use crate::{debug_console_log, JsResult};
 use std::any::Any;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::JsValue;
 
@@ -16,6 +17,7 @@ where
     internal: I,
     marker: std::marker::PhantomData<S>,
     type_id: std::any::TypeId,
+    video_controller: Rc<dyn VideoController>,
 }
 
 
@@ -24,15 +26,6 @@ pub trait VideoPlayerState {
     fn as_any(&self) -> &dyn Any;
 
     fn as_any_mut(&mut self) -> &mut dyn Any;
-}
-
-#[inline]
-pub fn get_state_owned<T: 'static + Clone>(value: &Box<dyn VideoPlayerState>) -> JsResult<T> {
-    if let Some(state_ref) = value.as_any().downcast_ref::<T>() {
-        Ok(state_ref.clone()) // TODO is cloning fine?
-    } else {
-        Err(JsValue::from_str("Invalid downcasting"))
-    }
 }
 
 impl<I, S> VideoPlayerState for VideoPlayer<I, S>
@@ -46,6 +39,15 @@ where
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
+    }
+}
+
+#[inline]
+pub fn get_state_owned<T: 'static + Clone>(value: &Box<dyn VideoPlayerState>) -> JsResult<T> {
+    if let Some(state_ref) = value.as_any().downcast_ref::<T>() {
+        Ok(state_ref.clone()) // TODO is cloning fine?
+    } else {
+        Err(JsValue::from_str("Invalid downcasting"))
     }
 }
 
@@ -64,6 +66,7 @@ where
             internal: self.internal,
             marker: std::marker::PhantomData,
             type_id: std::any::TypeId::of::<T>(),
+            video_controller: self.video_controller,
         }
     }
 }
@@ -97,6 +100,7 @@ where
             internal: self.internal.clone(),
             marker: self.marker,
             type_id: self.type_id,
+            video_controller: self.video_controller.clone(),
         }
     }
 }
@@ -105,12 +109,13 @@ impl<I> VideoPlayer<I, Uninitialized>
 where
     I: VideoInternal,
 {
-    pub fn new(internal: I) -> VideoPlayer<I, Ready> {
+    pub fn new(internal: I, video_controller: Rc<dyn VideoController>) -> VideoPlayer<I, Ready> {
         debug_console_log!("VideoPlayer initializing");
         VideoPlayer {
             internal,
             marker: std::marker::PhantomData,
             type_id: std::any::TypeId::of::<Ready>(),
+            video_controller,
         }
     }
 }
@@ -123,6 +128,7 @@ where
     pub(crate) fn play(self) -> VideoPlayer<I, Playing> {
         // should probably return a 'future' type state e.g. WaitingToPlay
         let _ = self.internal.play().expect("Failed to play");
+        self.video_controller.swap_play_button();
         self.transition()
     }
 }
@@ -133,6 +139,7 @@ where
 {
     pub(crate) fn pause(self) -> VideoPlayer<I, Paused> {
         let _ = self.internal.pause().expect("Failed to pause");
+        self.video_controller.swap_pause_button();
         self.transition()
     }
 
@@ -151,3 +158,10 @@ pub type Paused = Ready;
 impl VideoPlayerTypeState for Uninitialized {}
 impl VideoPlayerTypeState for Ready {}
 impl VideoPlayerTypeState for Playing {}
+
+
+pub trait VideoController {
+    fn swap_play_button(&self);
+
+    fn swap_pause_button(&self);
+}
