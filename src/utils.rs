@@ -1,9 +1,5 @@
+use std::panic;
 use wasm_bindgen::prelude::wasm_bindgen;
-
-pub fn set_panic_hook() {
-    #[cfg(feature = "console_error_panic_hook")]
-    console_error_panic_hook::set_once();
-}
 
 
 #[wasm_bindgen]
@@ -36,5 +32,11 @@ macro_rules! debug_console_log {
             log(&format_args!( $ ( $t) * ).to_string())
         }
     };
+}
+
+pub fn set_panic_hook() {
+    panic::set_hook(Box::new(move |info| {
+        error_log!("Rust panic: {}", info);
+    }))
 }
 
