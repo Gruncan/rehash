@@ -47,7 +47,7 @@ async fn init() -> JsResult<()> {
         .ok_or("Failed to get video player")?
         .dyn_into::<HtmlVideoElement>()?;
 
-    video_element.set_src("./pkg/66WithFacesV6Audio.mp4");
+    video_element.set_src("../pkg/66WithFacesV6Audio.mp4");
     let video_player = create_shared_video_player(video_element);
 
     let _callback_handler = CallbackHandler::new(video_player, document)?;
