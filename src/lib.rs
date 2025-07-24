@@ -1,13 +1,14 @@
 
 mod utils;
-mod video_player;
 mod prelude;
 mod web_video_player;
 mod callback_handler;
+mod video;
 
 use crate::callback_handler::*;
 use crate::prelude::*;
-use crate::video_player::VideoPlayer;
+use crate::video::html_video::HtmlVideoPlayerInternal;
+use crate::video::video_player::{SharedVideoPlayer, VideoPlayer};
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, JsValue};
@@ -28,7 +29,15 @@ pub fn main() {
 
 #[inline]
 fn create_shared_video_player(html_video_element: HtmlVideoElement) -> SharedVideoPlayer {
-    Arc::new(Mutex::new(Box::new(VideoPlayer::new(html_video_element))))
+    Arc::new(
+        Mutex::new(
+            Box::new(
+                VideoPlayer::new(
+                    HtmlVideoPlayerInternal::new(html_video_element)
+                )
+            )
+        )
+    )
 }
 
 async fn init() -> JsResult<()> {
@@ -39,7 +48,6 @@ async fn init() -> JsResult<()> {
         .dyn_into::<HtmlVideoElement>()?;
 
     video_element.set_src("./pkg/66WithFacesV6Audio.mp4");
-    // video_element.set_controls(true);
     let video_player = create_shared_video_player(video_element);
 
     let _callback_handler = CallbackHandler::new(video_player, document)?;

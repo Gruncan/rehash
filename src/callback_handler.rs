@@ -1,13 +1,11 @@
 use crate::prelude::*;
-use crate::video_player::{get_state_owned, Paused, Playing, VideoPlayer, VideoPlayerState};
+use crate::video::html_video::HtmlVideoPlayer;
+use crate::video::video_player::{get_state_owned, Paused, Playing, SharedVideoPlayer};
 use crate::{debug_console_log, JsResult};
 use std::ops::Deref;
-use std::sync::{Arc, Mutex};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, KeyboardEvent};
-
-pub(crate) type SharedVideoPlayer = Arc<Mutex<Box<dyn VideoPlayerState>>>;
 
 pub struct CallbackHandler {
     video_player: SharedVideoPlayer,
@@ -38,9 +36,9 @@ impl CallbackHandler {
 pub fn play(ctx: &mut SharedVideoPlayer) -> JsResult<()> {
     let mutex = ctx.lock().unwrap();
     let mut cell = mutex;
-    let video_paused: VideoPlayer<Paused> = get_state_owned(cell.deref())?;
+    let video_paused: HtmlVideoPlayer<Paused> = get_state_owned(cell.deref())?;
 
-    let video: VideoPlayer<Playing> = video_paused.play();
+    let video: HtmlVideoPlayer<Playing> = video_paused.play();
 
     *cell = Box::new(video);
 
@@ -51,9 +49,9 @@ pub fn play(ctx: &mut SharedVideoPlayer) -> JsResult<()> {
 pub fn pause(ctx: &mut SharedVideoPlayer) -> JsResult<()> {
     let mutex = ctx.lock().unwrap();
     let mut cell = mutex;
-    let video_paused: VideoPlayer<Playing> = get_state_owned(cell.deref())?;
+    let video_paused: HtmlVideoPlayer<Playing> = get_state_owned(cell.deref())?;
 
-    let video: VideoPlayer<Paused> = video_paused.pause();
+    let video: HtmlVideoPlayer<Paused> = video_paused.pause();
 
     *cell = Box::new(video);
 

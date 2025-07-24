@@ -1,11 +1,19 @@
 use crate::prelude::*;
+use crate::video::video_internal::VideoInternal;
 use crate::{debug_console_log, JsResult};
 use std::any::Any;
+use std::sync::{Arc, Mutex};
 use wasm_bindgen::JsValue;
-use web_sys::HtmlVideoElement;
 
-pub struct VideoPlayer<S: VideoPlayerTypeState> {
-    internal: HtmlVideoElement,
+pub type SharedVideoPlayer = Arc<Mutex<Box<dyn VideoPlayerState>>>;
+
+
+pub struct VideoPlayer<I, S>
+where
+    I: VideoInternal,
+    S: VideoPlayerTypeState,
+{
+    internal: I,
     marker: std::marker::PhantomData<S>,
     type_id: std::any::TypeId,
 }
@@ -27,8 +35,9 @@ pub fn get_state_owned<T: 'static + Clone>(value: &Box<dyn VideoPlayerState>) ->
     }
 }
 
-impl<S> VideoPlayerState for VideoPlayer<S>
+impl<I, S> VideoPlayerState for VideoPlayer<I, S>
 where
+    I: VideoInternal + 'static,
     S: VideoPlayerTypeState + 'static,
 {
     fn as_any(&self) -> &dyn Any {
@@ -41,11 +50,12 @@ where
 }
 
 
-impl<S> VideoPlayer<S>
+impl<I, S> VideoPlayer<I, S>
 where
+    I: VideoInternal + 'static,
     S: VideoPlayerTypeState,
 {
-    pub(self) fn transition<T>(self) -> VideoPlayer<T>
+    pub(self) fn transition<T>(self) -> VideoPlayer<I, T>
     where
         T: VideoPlayerTypeState + 'static,
     {
@@ -58,8 +68,28 @@ where
     }
 }
 
-impl<S> Clone for VideoPlayer<S>
+impl<I, S> VideoPlayer<I, S>
 where
+    I: VideoInternal,
+    S: VideoPlayerTypeState,
+{
+    pub fn mute(&self) {
+        self.internal.mute(true).expect("TODO: panic message");
+    }
+
+    pub fn fast_forward(&self) {
+        self.internal.fast_forward().expect("TODO: panic message");
+    }
+
+    pub fn rewind(&self) {
+        self.internal.rewind().expect("TODO: panic message");
+    }
+
+}
+
+impl<I, S> Clone for VideoPlayer<I, S>
+where
+    I: VideoInternal,
     S: VideoPlayerTypeState,
 {
     fn clone(&self) -> Self {
@@ -71,8 +101,11 @@ where
     }
 }
 
-impl VideoPlayer<Uninitialized> {
-    pub fn new(internal: HtmlVideoElement) -> VideoPlayer<Ready> {
+impl<I> VideoPlayer<I, Uninitialized>
+where
+    I: VideoInternal,
+{
+    pub fn new(internal: I) -> VideoPlayer<I, Ready> {
         debug_console_log!("VideoPlayer initializing");
         VideoPlayer {
             internal,
@@ -83,16 +116,22 @@ impl VideoPlayer<Uninitialized> {
 }
 
 
-impl VideoPlayer<Ready> {
-    pub(crate) fn play(self) -> VideoPlayer<Playing> {
+impl<I> VideoPlayer<I, Ready>
+where
+    I: VideoInternal + 'static,
+{
+    pub(crate) fn play(self) -> VideoPlayer<I, Playing> {
         // should probably return a 'future' type state e.g. WaitingToPlay
         let _ = self.internal.play().expect("Failed to play");
         self.transition()
     }
 }
 
-impl VideoPlayer<Playing> {
-    pub(crate) fn pause(self) -> VideoPlayer<Paused> {
+impl<I> VideoPlayer<I, Playing>
+where
+    I: VideoInternal + 'static,
+{
+    pub(crate) fn pause(self) -> VideoPlayer<I, Paused> {
         let _ = self.internal.pause().expect("Failed to pause");
         self.transition()
     }
