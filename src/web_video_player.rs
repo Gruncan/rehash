@@ -1,16 +1,21 @@
 use crate::prelude::*;
-use std::ops::Deref;
-use std::sync::{Arc, Mutex};
-
 use crate::video_player::{get_state_owned, Paused, Playing, Uninitialized, VideoPlayer, VideoPlayerState};
 use crate::{console_log, JsResult};
+use std::ops::Deref;
+use std::sync::{Arc, Mutex};
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
-use web_sys::HtmlVideoElement;
+use web_sys::{HtmlVideoElement, KeyboardEvent};
+
+
+type SharedVideoPlayer = Arc<Mutex<Box<dyn VideoPlayerState>>>;
 
 #[wasm_bindgen]
 pub struct WebVideoPlayer {
-    video_player: Arc<Mutex<Box<dyn VideoPlayerState>>>,
+    video_player: SharedVideoPlayer,
+    // TODO fix this
+    closure: Option<Closure<dyn FnMut(KeyboardEvent)>>,
 }
 
 #[wasm_bindgen]
@@ -23,27 +28,55 @@ impl WebVideoPlayer {
         let raw = VideoPlayer::<Uninitialized>::new(video_element);
         console_log!("VideoPlayer initializing");
 
-        // let closure = Closure::new(move |event: web_sys::KeyboardEvent| {
-        //     if event.key() == "k" {
-        //         event.prevent_default();
-        //     }
-        // });
 
-        Ok(
-            WebVideoPlayer {
-                video_player: Arc::new(Mutex::new(Box::new(raw))),
+        let video_player: SharedVideoPlayer = Arc::new(Mutex::new(Box::new(raw)));
+
+        let mut current = WebVideoPlayer {
+            video_player: video_player.clone(),
+            closure: None,
+        };
+
+        let closure: Closure<dyn FnMut(KeyboardEvent)> = Closure::new(move |event: web_sys::KeyboardEvent| {
+            let key = event.key();
+            event.prevent_default();
+            if key == "k" {
+                current.play().expect("Failed to play");
+            } else if key == "l" {
+                current.pause().expect("Failed to pause");
             }
-        )
+        });
+
+
+        Ok(Self {
+            video_player,
+            closure: Some(closure),
+        })
     }
 
-    #[wasm_bindgen]
+
     pub fn play(&mut self) -> JsResult<()> {
-        let mut mutex = self.video_player.lock().unwrap();
-        let video_paused: VideoPlayer<Paused> = get_state_owned(mutex.deref()).unwrap();
-        let video: VideoPlayer<Playing> = video_paused.resume();
-        *mutex = Box::new(video);
+        let mutex = self.video_player.lock().unwrap();
+        let mut cell = mutex;
+        let video_paused: VideoPlayer<Paused> = get_state_owned(cell.deref()).unwrap();
+
+        let video: VideoPlayer<Playing> = video_paused.play();
+
+        *cell = Box::new(video);
+
         Ok(())
     }
 
+
+    pub fn pause(&mut self) -> JsResult<()> {
+        let mutex = self.video_player.lock().unwrap();
+        let mut cell = mutex;
+        let video_paused: VideoPlayer<Playing> = get_state_owned(cell.deref()).unwrap();
+
+        let video: VideoPlayer<Paused> = video_paused.pause();
+
+        *cell = Box::new(video);
+
+        Ok(())
+    }
 
 }
