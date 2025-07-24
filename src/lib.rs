@@ -1,38 +1,36 @@
 
 mod utils;
 mod video_player;
+mod prelude;
+mod web_video_player;
 
-use wasm_bindgen::{JsCast, JsValue};
+use crate::prelude::*;
+use crate::web_video_player::WebVideoPlayer;
 use wasm_bindgen::prelude::wasm_bindgen;
-use web_sys::{HtmlElement, HtmlVideoElement};
-use crate::video_player::*;
+use wasm_bindgen::{JsCast, JsValue};
+use web_sys::HtmlVideoElement;
 
+type JsResult<T> = Result<T, JsValue>;
 
-#[wasm_bindgen]
-pub struct WebVideoPlayer{
-    video_player: VideoPlayer<Uninitialized>
+#[wasm_bindgen(start)]
+pub fn main() {
+    set_panic_hook();
+
+    wasm_bindgen_futures::spawn_local(async move {
+        if let Err(e) = init().await {
+            error_log!("{}", e.as_string().unwrap());
+        }
+    })
 }
 
-#[wasm_bindgen]
-impl WebVideoPlayer {
+async fn init() -> JsResult<()> {
+    let window = web_sys::window().ok_or("Failed to get window")?;
+    let document = window.document().ok_or("Failed to get document")?;
+    let video_element = document.get_element_by_id("video-player")
+        .ok_or("Failed to get video player")?
+        .dyn_into::<HtmlVideoElement>()?;
 
-    #[wasm_bindgen(constructor)]
-    pub fn new(video_element: HtmlVideoElement) -> Result<Self, JsValue> {
-        utils::set_panic_hook();
+    WebVideoPlayer::new(video_element);
 
-        let window = web_sys::window().unwrap();
-        let document = window.document().unwrap();
-        let video_element = document.get_element_by_id("video-player")
-            .unwrap()
-            .dyn_into::<HtmlVideoElement>()?;
-
-        let raw = VideoPlayer::<Uninitialized>::new();
-
-        Ok(
-            WebVideoPlayer{
-                video_player: raw,
-            }
-        )
-
-    }
+    Ok(())
 }
