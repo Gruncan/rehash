@@ -31,3 +31,6 @@ features = [
     "MouseEvent",
     "DomRect",
 ]
+
+#[alias]
+#clean-all = "clean && rm -rf pkg"

@@ -1,20 +1,51 @@
 use crate::debug_console_log;
 use crate::prelude::*;
+use std::any::Any;
 use web_sys::HtmlVideoElement;
 
-pub struct VideoPlayer<S: VideoPlayerState> {
+pub struct VideoPlayer<S: VideoPlayerTypeState> {
     internal: HtmlVideoElement,
     marker: std::marker::PhantomData<S>,
 }
 
 
+#[allow(dead_code)]
+pub trait VideoPlayerState {
+    fn as_any(&self) -> &dyn Any;
+
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+}
+
+#[inline]
+pub fn get_state_owned<T: 'static + Clone>(value: &Box<dyn VideoPlayerState>) -> Option<T> {
+    if let Some(state_ref) = value.as_any().downcast_ref::<T>() {
+        Some(state_ref.clone()) // TODO is cloning fine?
+    } else {
+        None
+    }
+}
+
+impl<S> VideoPlayerState for VideoPlayer<S>
+where
+    S: VideoPlayerTypeState + 'static,
+{
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+
 impl<S> VideoPlayer<S>
 where
-    S: VideoPlayerState,
+    S: VideoPlayerTypeState,
 {
-    pub(crate) fn transition<T>(self) -> VideoPlayer<T>
+    pub(self) fn transition<T>(self) -> VideoPlayer<T>
     where
-        T: VideoPlayerState,
+        T: VideoPlayerTypeState,
     {
         debug_console_log!("Transitioning from state {} to {}", std::any::type_name::<S>(), std::any::type_name::<T>());
         VideoPlayer {
@@ -24,8 +55,20 @@ where
     }
 }
 
+impl<S> Clone for VideoPlayer<S>
+where
+    S: VideoPlayerTypeState,
+{
+    fn clone(&self) -> Self {
+        Self {
+            internal: self.internal.clone(),
+            marker: self.marker,
+        }
+    }
+}
+
 impl VideoPlayer<Uninitialized> {
-    pub fn new(internal: HtmlVideoElement) -> Self {
+    pub fn new(internal: HtmlVideoElement) -> VideoPlayer<Ready> {
         VideoPlayer {
             internal,
             marker: std::marker::PhantomData
@@ -42,10 +85,13 @@ impl VideoPlayer<Playing> {
 }
 
 impl VideoPlayer<Paused> {
-
+    pub(crate) fn resume(self) -> VideoPlayer<Playing> {
+        self.internal.play();
+        self.transition()
+    }
 }
 
-trait VideoPlayerState {
+pub trait VideoPlayerTypeState {
 
 }
 
@@ -54,7 +100,7 @@ pub enum Ready {}
 pub enum Playing {}
 pub enum Paused {}
 
-impl VideoPlayerState for Uninitialized {}
-impl VideoPlayerState for Ready {}
-impl VideoPlayerState for Playing {}
-impl VideoPlayerState for Paused {}
+impl VideoPlayerTypeState for Uninitialized {}
+impl VideoPlayerTypeState for Ready {}
+impl VideoPlayerTypeState for Playing {}
+impl VideoPlayerTypeState for Paused {}
