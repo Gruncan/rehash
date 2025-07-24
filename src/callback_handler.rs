@@ -49,9 +49,9 @@ pub fn play(ctx: &mut SharedVideoPlayer) -> JsResult<()> {
 pub fn pause(ctx: &mut SharedVideoPlayer) -> JsResult<()> {
     let mutex = ctx.lock().unwrap();
     let mut cell = mutex;
-    let video_paused: HtmlVideoPlayer<Playing> = get_state_owned(cell.deref())?;
+    let video_playing: HtmlVideoPlayer<Playing> = get_state_owned(cell.deref())?;
 
-    let video: HtmlVideoPlayer<Paused> = video_paused.pause();
+    let video: HtmlVideoPlayer<Paused> = video_playing.pause();
 
     *cell = Box::new(video);
 
