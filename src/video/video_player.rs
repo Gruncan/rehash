@@ -115,19 +115,19 @@ impl<I> VideoPlayer<I, Uninitialized>
 where
     I: VideoInternal,
 {
-    pub fn new(internal: I, video_controller: Rc<dyn VideoController>) -> VideoPlayer<I, Ready> {
+    pub fn new(internal: I, video_controller: Rc<dyn VideoController>) -> VideoPlayer<I, Paused> {
         debug_console_log!("VideoPlayer initializing");
         VideoPlayer {
             internal,
             marker: std::marker::PhantomData,
-            type_id: std::any::TypeId::of::<Ready>(),
+            type_id: std::any::TypeId::of::<Paused>(),
             video_controller,
         }
     }
 }
 
 
-impl<I> VideoPlayer<I, Ready>
+impl<I> VideoPlayer<I, Paused>
 where
     I: VideoInternal + 'static,
 {
@@ -156,13 +156,13 @@ pub trait VideoPlayerTypeState {
 }
 
 pub enum Uninitialized {}
-pub enum Ready {}
+pub enum Paused {}
 pub enum Playing {}
 
-pub type Paused = Ready;
+pub type Ready = Paused;
 
 impl VideoPlayerTypeState for Uninitialized {}
-impl VideoPlayerTypeState for Ready {}
+impl VideoPlayerTypeState for Paused {}
 impl VideoPlayerTypeState for Playing {}
 
 
