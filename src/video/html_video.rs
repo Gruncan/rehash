@@ -60,14 +60,18 @@ pub(crate) struct HtmlVideoController {
 
 
 impl VideoController for HtmlVideoController {
+    fn get_element_ids(&self) -> Vec<String> {
+        todo!()
+    }
+
     fn swap_play_button(&self) {
-        self.play_icon.style().set_property("display", "block").expect("Failed to set play icon");
-        self.pause_icon.style().set_property("display", "none").expect("Failed to set pause icon");
+        self.play_icon.style().set_property("display", "none").expect("Failed to set play icon");
+        self.pause_icon.style().set_property("display", "block").expect("Failed to set pause icon");
     }
 
     fn swap_pause_button(&self) {
-        self.play_icon.style().set_property("display", "none").expect("Failed to set play icon");
-        self.pause_icon.style().set_property("display", "block").expect("Failed to set pause icon");
+        self.play_icon.style().set_property("display", "block").expect("Failed to set play icon");
+        self.pause_icon.style().set_property("display", "none").expect("Failed to set pause icon");
     }
 }
 

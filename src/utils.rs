@@ -29,7 +29,7 @@ macro_rules! debug_console_log {
     ($($t:tt)*) => {
         #[cfg(debug_assertions)]
         {
-            log(&format_args!( $ ( $t) * ).to_string())
+            log(&format_args!("[DEBUG] {}", format_args!($($t)*)).to_string())
         }
     };
 }

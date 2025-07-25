@@ -26,6 +26,8 @@ pub trait VideoPlayerState {
     fn as_any(&self) -> &dyn Any;
 
     fn as_any_mut(&mut self) -> &mut dyn Any;
+
+    fn get_controller(&self) -> &dyn VideoController;
 }
 
 impl<I, S> VideoPlayerState for VideoPlayer<I, S>
@@ -39,6 +41,10 @@ where
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
+    }
+
+    fn get_controller(&self) -> &dyn VideoController {
+        self.video_controller.as_ref()
     }
 }
 
@@ -161,6 +167,8 @@ impl VideoPlayerTypeState for Playing {}
 
 
 pub trait VideoController {
+    fn get_element_ids(&self) -> Vec<String>;
+
     fn swap_play_button(&self);
 
     fn swap_pause_button(&self);
