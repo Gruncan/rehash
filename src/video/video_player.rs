@@ -35,6 +35,12 @@ pub trait VideoPlayerState {
     fn fast_forward(&self);
 
     fn rewind(&self);
+
+    fn get_progress(&self) -> f64;
+
+    fn get_video_length(&self) -> f64;
+
+    fn set_video_time(&self);
 }
 
 impl<I, S> VideoPlayerState for VideoPlayer<I, S>
@@ -66,6 +72,20 @@ where
 
     fn rewind(&self) {
         self.internal.rewind().expect("Video player failed to rewind");
+    }
+
+    fn get_progress(&self) -> f64 {
+        self.internal.get_progress().expect("Video player failed to get progress")
+    }
+
+    fn get_video_length(&self) -> f64 {
+        self.internal.get_video_length().expect("Failed to get video length")
+    }
+
+    fn set_video_time(&self) {
+        let progress = self.get_progress();
+        let duration = self.get_video_length();
+        self.video_controller.update_progress(progress, duration)
     }
 }
 
@@ -179,10 +199,14 @@ where
     fn swap_mute_button(&self);
 
     fn swap_unmute_button(&self);
+
+    fn update_progress(&self, progress: f64, duration: f64);
 }
 
 pub trait VideoUIRegister {
     fn register_global_event_listener<T: ?Sized + WasmClosure>(&self, closure: Box<Closure<T>>);
 
     fn register_element_event_listener<T: ?Sized + WasmClosure>(&self, ids: Vec<String>, closure: Box<Closure<T>>);
+
+    fn register_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>);
 }

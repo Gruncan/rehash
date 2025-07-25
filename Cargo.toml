@@ -13,7 +13,7 @@ wasm-bindgen-futures = "0.4.50"
 
 [dependencies.web-sys]
 version = "0.3"
-features = ["console", "Document", "Element", "HtmlElement", "HtmlVideoElement", "HtmlInputElement", "HtmlButtonElement", "Window", "FileList", "File", "Url", "Event", "EventTarget", "KeyboardEvent", "MouseEvent", "DomRect", "SvgElement", "CssStyleDeclaration"]
+features = ["console", "Document", "Element", "HtmlElement", "HtmlVideoElement", "HtmlInputElement", "HtmlButtonElement", "Window", "FileList", "File", "Url", "Event", "EventTarget", "KeyboardEvent", "MouseEvent", "DomRect", "SvgElement", "CssStyleDeclaration", "HtmlSpanElement"]
 
 #[alias]
 #clean-all = "clean && rm -rf pkg"

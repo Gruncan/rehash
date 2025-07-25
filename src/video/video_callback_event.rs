@@ -22,15 +22,21 @@ where
     fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()>;
 }
 
+pub(crate) trait VideoCallbackEventInit {
+    // Forces callback_event marco to work correctly
+    fn new() -> Self;
+}
 
 #[macro_export]
 macro_rules! callback_event {
     ($t:ty) => {
         std::rc::Rc::new(std::cell::RefCell::new(<$t>::new()))
     };
-    ($t:ty, $($args:expr),*) => {
-        std::rc::Rc::new(std::cell::RefCell::new(<$t>::new($($args),*)))
-    }
+
+    // Maybe needed at some point
+    // ($t:ty, $($args:expr),*) => {
+    //     std::rc::Rc::new(std::cell::RefCell::new(<$t>::new($($args),*)))
+    // }
 }
 
 
@@ -38,6 +44,14 @@ macro_rules! callback_event {
 #[derive(Debug)]
 pub(crate) struct PlayPauseEvent {
     type_id: TypeId,
+}
+
+impl VideoCallbackEventInit for PlayPauseEvent {
+    fn new() -> Self {
+        Self {
+            type_id: TypeId::of::<Paused>(),
+        }
+    }
 }
 
 impl<I> VideoCallbackEvent<I> for PlayPauseEvent
@@ -67,11 +81,6 @@ where
 }
 
 impl PlayPauseEvent {
-    pub fn new() -> Self {
-        Self {
-            type_id: TypeId::of::<Paused>(),
-        }
-    }
 
     pub fn is_paused(&self) -> bool {
         self.type_id == TypeId::of::<Paused>()
@@ -87,19 +96,28 @@ pub(crate) struct MuteUnmuteEvent {
     type_id: TypeId,
 }
 
+
+impl VideoCallbackEventInit for MuteUnmuteEvent {
+    fn new() -> Self {
+        Self {
+            type_id: TypeId::of::<Unmuted>(),
+        }
+    }
+}
+
 impl<I> VideoCallbackEvent<I> for MuteUnmuteEvent
 where
     I: VideoInternal + 'static,
 {
     fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
         let mutex = ctx.lock().unwrap();
-        let cell = mutex;
+        let video_player_state = mutex.deref();
 
         if self.is_unmuted() {
-            cell.deref().mute();
+            video_player_state.mute();
             self.type_id = TypeId::of::<Muted>();
         } else {
-            cell.deref().unmute();
+            video_player_state.unmute();
             self.type_id = TypeId::of::<Unmuted>();
         }
 
@@ -109,16 +127,36 @@ where
 
 
 impl MuteUnmuteEvent {
-    pub fn new() -> Self {
-        Self {
-            type_id: TypeId::of::<Unmuted>(),
-        }
-    }
 
     pub fn is_unmuted(&self) -> bool {
         self.type_id == TypeId::of::<Unmuted>()
     }
 }
 
+#[derive(Debug)]
+pub(crate) struct ProgressBarEvent {}
+
+impl VideoCallbackEventInit for ProgressBarEvent {
+    fn new() -> Self {
+        Self {}
+    }
+}
+
+
+impl<I> VideoCallbackEvent<I> for ProgressBarEvent
+where
+    I: VideoInternal + 'static,
+{
+    fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        let mutex = ctx.lock().unwrap();
+        let cell = mutex.deref();
+
+        cell.set_video_time();
+
+        Ok(())
+    }
+}
+
+impl ProgressBarEvent {}
 
 

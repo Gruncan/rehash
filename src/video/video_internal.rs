@@ -18,6 +18,10 @@ pub trait VideoInternal: Clone {
     fn get_volume(&self);
 
     fn get_playback_time(&self);
+
+    fn get_progress(&self) -> VideoResult<f64>;
+
+    fn get_video_length(&self) -> VideoResult<f64>;
 }
 
 

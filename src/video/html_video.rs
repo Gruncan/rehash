@@ -1,5 +1,6 @@
+use crate::get_element_as;
 use crate::log;
-use crate::video::video_callback_event::{CallbackController, MuteUnmuteEvent, PlayPauseEvent, VideoCallbackEvent};
+use crate::video::video_callback_event::{CallbackController, MuteUnmuteEvent, PlayPauseEvent, ProgressBarEvent, VideoCallbackEvent, VideoCallbackEventInit};
 use crate::video::video_internal::{VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
 use crate::{callback_event, console_log, debug_console_log, JsResult};
@@ -8,7 +9,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::closure::{Closure, WasmClosure};
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Document, Element, HtmlVideoElement, KeyboardEvent, SvgElement};
+use web_sys::{Document, Element, HtmlSpanElement, HtmlVideoElement, KeyboardEvent, SvgElement};
 
 
 const SKIP_INCREMENT: f64 = 5.0;
@@ -19,6 +20,19 @@ type Event = Rc<RefCell<dyn VideoCallbackEvent<HtmlVideoPlayerInternal>>>;
 pub(crate) struct HtmlVideoPlayerInternal {
     video_element: HtmlVideoElement,
 }
+
+
+#[macro_export]
+macro_rules! get_element_as {
+    ($document:expr, $id:expr, $t:ty) => {
+        $document
+            .get_element_by_id($id)
+            .expect(&format!("Failed to get element with id '{}'", $id))
+            .dyn_into::<$t>()
+            .expect(&format!("Failed to cast element '{}' to {}", $id, stringify!($t)))
+    };
+}
+
 
 impl VideoInternal for HtmlVideoPlayerInternal {
     fn mute(&self, should_be_muted: bool) -> VideoResultUnit {
@@ -59,6 +73,14 @@ impl VideoInternal for HtmlVideoPlayerInternal {
     fn get_playback_time(&self) {
         todo!()
     }
+
+    fn get_progress(&self) -> VideoResult<f64> {
+        Ok(self.video_element.current_time())
+    }
+
+    fn get_video_length(&self) -> VideoResult<f64> {
+        Ok(self.video_element.duration())
+    }
 }
 
 impl Clone for HtmlVideoPlayerInternal {
@@ -78,10 +100,13 @@ impl HtmlVideoPlayerInternal {
 
 pub(crate) struct HtmlVideoUIController {
     document: Document,
+    video: HtmlVideoElement,
     play_icon: SvgElement,
     pause_icon: SvgElement,
     volume_icon: SvgElement,
     muted_icon: SvgElement,
+    current_time: HtmlSpanElement,
+    total_time: HtmlSpanElement,
 }
 
 
@@ -106,6 +131,18 @@ impl VideoUIController<HtmlVideoPlayerInternal> for HtmlVideoUIController {
         self.muted_icon.style().set_property("display", "none").expect("Failed to set mute icon");
         self.volume_icon.style().set_property("display", "block").expect("Failed to set volume icon");
     }
+
+    fn update_progress(&self, progress: f64, duration: f64) {
+        self.current_time.set_text_content(Some(format_time(progress).as_str()));
+        self.total_time.set_text_content(Some(format_time(duration).as_str()));
+    }
+}
+
+#[inline]
+fn format_time(time: f64) -> String {
+    let mins = (time / 60.0).floor();
+    let secs = (time % 60.0).floor();
+    format!("{:02}:{:02}", mins, secs)
 }
 
 impl VideoUIRegister for HtmlVideoUIController {
@@ -125,6 +162,12 @@ impl VideoUIRegister for HtmlVideoUIController {
         }
         closure.forget();
     }
+
+    fn register_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>) {
+        self.video.add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
+            .expect("Failed to register global event listener");
+        closure.forget();
+    }
 }
 
 impl HtmlVideoUIController {
@@ -136,32 +179,37 @@ impl HtmlVideoUIController {
     const MUTE_ICON_ID: &'static str = "mute-icon";
     const MUTE_UNMUTE_ID: &'static str = "volume-btn";
 
+    const CURRENT_TIME_ID: &'static str = "current-time";
+    const TOTAL_TIME_ID: &'static str = "total-time";
+
+    const VIDEO_ID: &'static str = "video-player";
+
 
     pub fn new(document: Document) -> Self {
-        let play_icon = Self::get_icon(&document, Self::PLAY_ICON_ID);
+        let play_icon = get_element_as!(&document, Self::PLAY_ICON_ID, SvgElement);
+        let pause_icon = get_element_as!(&document, Self::PAUSE_ICON_ID, SvgElement);
 
-        let pause_icon = Self::get_icon(&document, Self::PAUSE_ICON_ID);
+        let volume_icon = get_element_as!(&document, Self::VOLUME_ICON_ID, SvgElement);
+        let muted_icon = get_element_as!(&document, Self::MUTE_ICON_ID, SvgElement);
 
-        let volume_icon = Self::get_icon(&document, Self::VOLUME_ICON_ID);
+        let current_time = get_element_as!(&document, Self::CURRENT_TIME_ID, HtmlSpanElement);
+        let total_time = get_element_as!(&document, Self::TOTAL_TIME_ID, HtmlSpanElement);
 
-        let muted_icon = Self::get_icon(&document, Self::MUTE_ICON_ID);
+        let video_element = get_element_as!(&document, Self::VIDEO_ID, HtmlVideoElement);
 
         Self {
             document,
+            video: video_element,
             play_icon,
             pause_icon,
             volume_icon,
             muted_icon,
+            current_time,
+            total_time
         }
     }
 
-    #[inline]
-    fn get_icon(document: &Document, id: &str) -> SvgElement {
-        document.get_element_by_id(id)
-            .expect("Failed to get play-icon")
-            .dyn_into::<SvgElement>()
-            .expect("Failed to cast SvgElement")
-    }
+
 }
 
 
@@ -170,6 +218,7 @@ pub(crate) struct HtmlVideoCallbackController {
     ui_controller: HtmlVideoUIController,
     callback_keyboard_events: HashMap<String, Event>,
     callback_control_events: HashMap<String, Event>,
+    callback_progress_event: Event,
 }
 
 
@@ -180,6 +229,7 @@ impl HtmlVideoCallbackController {
     pub fn new(video_player: SharedVideoPlayer, ui_controller: HtmlVideoUIController) -> Self {
         let play_pause_event: Event = callback_event!(PlayPauseEvent);
         let mute_unmute_event: Event = callback_event!(MuteUnmuteEvent);
+        let progress_event: Event = callback_event!(ProgressBarEvent);
 
         let keyboard_events: HashMap<String, Event> = HashMap::from([
             ("p".to_string(), play_pause_event.clone()),
@@ -191,11 +241,13 @@ impl HtmlVideoCallbackController {
             (Self::MUTE_UNMUTE_ID.to_string(), mute_unmute_event.clone()),
         ]);
 
+
         Self {
             video_player,
             ui_controller,
             callback_keyboard_events: keyboard_events,
             callback_control_events: control_events,
+            callback_progress_event: progress_event
         }
     }
 }
@@ -212,9 +264,9 @@ impl CallbackController for HtmlVideoCallbackController {
         }));
 
         self.ui_controller.register_global_event_listener(keyboard_closure);
+
         let mut video_player_c = self.video_player.clone();
         let c = self.callback_control_events.clone();
-        console_log!("{:?}", c);
         let control_closure: Box<Closure<dyn FnMut(web_sys::Event)>> = Box::new(Closure::new(move |event: web_sys::Event| {
             let target = event.current_target().expect("Failed to get target for control callback");
             console_log!("{:?}", target);
@@ -229,6 +281,17 @@ impl CallbackController for HtmlVideoCallbackController {
 
         let keys: Vec<String> = self.callback_control_events.iter().map(|(k, _)| k.clone()).collect();
         self.ui_controller.register_element_event_listener(keys, control_closure);
+
+        let mut video_player_t = self.video_player.clone();
+        let t = self.callback_progress_event.clone();
+
+        let timeupdate_closure: Box<Closure<dyn FnMut()>> = Box::new(Closure::new(move || {
+            // TODO use this return
+            console_log!("{}", "In closure for timeupdate");
+            let _ = callback_handler(&mut video_player_t, Some(&t));
+        }));
+
+        self.ui_controller.register_global_event_listener_specific("timeupdate", timeupdate_closure);
     }
 }
 
