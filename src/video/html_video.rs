@@ -1,9 +1,17 @@
+use crate::log;
+use crate::video::video_callback_event::{CallbackController, PlayPauseEvent, VideoCallbackEvent};
 use crate::video::video_internal::{VideoInternal, VideoResult, VideoResultUnit};
-use crate::video::video_player::{VideoController, VideoPlayer};
-use wasm_bindgen::JsCast;
-use web_sys::{Document, HtmlVideoElement, SvgElement};
+use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
+use crate::{callback_event, console_log, debug_console_log, JsResult};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
+use wasm_bindgen::closure::{Closure, WasmClosure};
+use wasm_bindgen::{JsCast, JsValue};
+use web_sys::{Document, Element, HtmlVideoElement, KeyboardEvent, SvgElement};
 
 pub(crate) type HtmlVideoPlayer<S> = VideoPlayer<HtmlVideoPlayerInternal, S>;
+type Event = Rc<RefCell<dyn VideoCallbackEvent<HtmlVideoPlayerInternal>>>;
 
 pub(crate) struct HtmlVideoPlayerInternal {
     video_element: HtmlVideoElement,
@@ -53,16 +61,14 @@ impl HtmlVideoPlayerInternal {
 }
 
 
-pub(crate) struct HtmlVideoController {
+pub(crate) struct HtmlVideoUIController {
+    document: Document,
     play_icon: SvgElement,
     pause_icon: SvgElement,
 }
 
 
-impl VideoController for HtmlVideoController {
-    fn get_element_ids(&self) -> Vec<String> {
-        todo!()
-    }
+impl VideoUIController<HtmlVideoPlayerInternal> for HtmlVideoUIController {
 
     fn swap_play_button(&self) {
         self.play_icon.style().set_property("display", "none").expect("Failed to set play icon");
@@ -75,22 +81,122 @@ impl VideoController for HtmlVideoController {
     }
 }
 
-impl HtmlVideoController {
-    pub fn new(document: &Document) -> Self {
-        let play_icon = document.get_element_by_id("play-icon")
+impl VideoUIRegister for HtmlVideoUIController {
+    fn register_global_event_listener<T: ?Sized + WasmClosure>(&self, closure: Box<Closure<T>>) {
+        self.document.add_event_listener_with_callback("keydown", closure.as_ref().as_ref().unchecked_ref())
+            .expect("Failed to register global event listener");
+        closure.forget();
+    }
+
+    fn register_element_event_listener<T: ?Sized + WasmClosure>(&self, ids: Vec<String>, closure: Box<Closure<T>>) {
+        for key in ids {
+            if let Some(element) = self.document.get_element_by_id(key.as_str()) {
+                element.add_event_listener_with_callback("click", closure.as_ref().as_ref().unchecked_ref())
+                    .expect("Failed to add click event listener");
+            }
+        }
+        closure.forget();
+    }
+}
+
+impl HtmlVideoUIController {
+    const PLAY_ICON_ID: &'static str = "play-icon";
+    const PAUSE_ICON_ID: &'static str = "pause-icon";
+    const PLAY_PAUSE_ID: &'static str = "play-pause";
+
+
+    pub fn new(document: Document) -> Self {
+        let play_icon = document.get_element_by_id(Self::PLAY_ICON_ID)
             .expect("Failed to get play-icon")
             .dyn_into::<SvgElement>()
             .expect("Failed to cast SvgElement");
 
-        let pause_icon = document.get_element_by_id("pause-icon")
+        let pause_icon = document.get_element_by_id(Self::PAUSE_ICON_ID)
             .expect("Failed to get pause-icon")
             .dyn_into::<SvgElement>()
             .expect("Failed to cast SvgElement");
 
         Self {
+            document,
             play_icon,
             pause_icon,
         }
     }
 }
 
+pub(crate) struct HtmlVideoCallbackController {
+    video_player: SharedVideoPlayer,
+    ui_controller: HtmlVideoUIController,
+    callback_keyboard_events: HashMap<String, Event>,
+    callback_control_events: HashMap<String, Event>,
+}
+
+
+impl HtmlVideoCallbackController {
+    const PLAY_PAUSE_ID: &'static str = "play-pause";
+
+    pub fn new(video_player: SharedVideoPlayer, ui_controller: HtmlVideoUIController) -> Self {
+        let play_pause_event: Event = callback_event!(PlayPauseEvent);
+
+        let keyboard_events: HashMap<String, Event> = HashMap::from([
+            ("p".to_string(), play_pause_event.clone())
+        ]);
+
+        let control_events: HashMap<String, Event> = HashMap::from([
+            (Self::PLAY_PAUSE_ID.to_string(), play_pause_event.clone())
+        ]);
+
+        Self {
+            video_player,
+            ui_controller,
+            callback_keyboard_events: keyboard_events,
+            callback_control_events: control_events,
+        }
+    }
+}
+
+impl CallbackController for HtmlVideoCallbackController {
+    fn register_events(&self) {
+        let mut video_player_k = self.video_player.clone();
+        let d = self.callback_keyboard_events.clone();
+
+        let keyboard_closure: Box<Closure<dyn FnMut(KeyboardEvent)>> = Box::new(Closure::new(move |event: KeyboardEvent| {
+            let key = event.key();
+            // TODO use this return
+            let _ = callback_handler(&mut video_player_k, d.get(&key));
+        }));
+
+        self.ui_controller.register_global_event_listener(keyboard_closure);
+
+        let mut video_player_c = self.video_player.clone();
+        let c = self.callback_control_events.clone();
+        let control_closure: Box<Closure<dyn FnMut(web_sys::Event)>> = Box::new(Closure::new(move |event: web_sys::Event| {
+            let target = event.current_target().expect("Failed to get target for control callback");
+            if let Some(element) = target.dyn_ref::<Element>() {
+                let id = element.id();
+                if let Err(e) = callback_handler(&mut video_player_c, c.get(&id)) {
+                    console_log!("Id: {}", id);
+                }
+            }
+        }));
+
+        self.ui_controller.register_element_event_listener(vec!(Self::PLAY_PAUSE_ID.to_string()), control_closure);
+    }
+}
+
+
+fn callback_handler(ctx: &mut SharedVideoPlayer, callback_ref_opt: Option<&Event>) -> JsResult<()> {
+    if let Some(callback_ref) = callback_ref_opt {
+        let mut callback = callback_ref.borrow_mut();
+        match callback.trigger(ctx) {
+            Ok(_) => { Ok(()) }
+            Err(e) => {
+                debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
+                Err(e)
+            }
+        }
+    } else {
+        debug_console_log!("Callback not found");
+        Err(JsValue::from_str("Callback not found"))
+    }
+}

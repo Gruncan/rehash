@@ -4,6 +4,7 @@ use crate::{debug_console_log, JsResult};
 use std::any::Any;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
+use wasm_bindgen::closure::{Closure, WasmClosure};
 use wasm_bindgen::JsValue;
 
 pub type SharedVideoPlayer = Arc<Mutex<Box<dyn VideoPlayerState>>>;
@@ -17,7 +18,7 @@ where
     internal: I,
     marker: std::marker::PhantomData<S>,
     type_id: std::any::TypeId,
-    video_controller: Rc<dyn VideoController>,
+    video_controller: Rc<dyn VideoUIController<I>>,
 }
 
 
@@ -26,8 +27,6 @@ pub trait VideoPlayerState {
     fn as_any(&self) -> &dyn Any;
 
     fn as_any_mut(&mut self) -> &mut dyn Any;
-
-    fn get_controller(&self) -> &dyn VideoController;
 }
 
 impl<I, S> VideoPlayerState for VideoPlayer<I, S>
@@ -41,10 +40,6 @@ where
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
-    }
-
-    fn get_controller(&self) -> &dyn VideoController {
-        self.video_controller.as_ref()
     }
 }
 
@@ -115,7 +110,7 @@ impl<I> VideoPlayer<I, Uninitialized>
 where
     I: VideoInternal,
 {
-    pub fn new(internal: I, video_controller: Rc<dyn VideoController>) -> VideoPlayer<I, Paused> {
+    pub fn new(internal: I, video_controller: Rc<dyn VideoUIController<I>>) -> VideoPlayer<I, Paused> {
         debug_console_log!("VideoPlayer initializing");
         VideoPlayer {
             internal,
@@ -159,17 +154,23 @@ pub enum Uninitialized {}
 pub enum Paused {}
 pub enum Playing {}
 
-pub type Ready = Paused;
-
 impl VideoPlayerTypeState for Uninitialized {}
 impl VideoPlayerTypeState for Paused {}
 impl VideoPlayerTypeState for Playing {}
 
 
-pub trait VideoController {
-    fn get_element_ids(&self) -> Vec<String>;
+pub trait VideoUIController<I>
+where
+    I: VideoInternal,
+{
 
     fn swap_play_button(&self);
 
     fn swap_pause_button(&self);
+}
+
+pub trait VideoUIRegister {
+    fn register_global_event_listener<T: ?Sized + WasmClosure>(&self, closure: Box<Closure<T>>);
+
+    fn register_element_event_listener<T: ?Sized + WasmClosure>(&self, ids: Vec<String>, closure: Box<Closure<T>>);
 }
