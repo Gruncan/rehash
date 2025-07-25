@@ -27,6 +27,14 @@ pub trait VideoPlayerState {
     fn as_any(&self) -> &dyn Any;
 
     fn as_any_mut(&mut self) -> &mut dyn Any;
+
+    fn mute(&self);
+
+    fn unmute(&self);
+
+    fn fast_forward(&self);
+
+    fn rewind(&self);
 }
 
 impl<I, S> VideoPlayerState for VideoPlayer<I, S>
@@ -40,6 +48,24 @@ where
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
+    }
+
+    fn mute(&self) {
+        self.internal.mute(true).expect("Video player failed to mute");
+        self.video_controller.swap_mute_button();
+    }
+
+    fn unmute(&self) {
+        self.internal.mute(false).expect("Video player failed to unmute");
+        self.video_controller.swap_unmute_button();
+    }
+
+    fn fast_forward(&self) {
+        self.internal.fast_forward().expect("Video player failed to fast forward");
+    }
+
+    fn rewind(&self) {
+        self.internal.rewind().expect("Video player failed to rewind");
     }
 }
 
@@ -72,24 +98,6 @@ where
     }
 }
 
-impl<I, S> VideoPlayer<I, S>
-where
-    I: VideoInternal,
-    S: VideoPlayerTypeState,
-{
-    pub fn mute(&self) {
-        self.internal.mute(true).expect("TODO: panic message");
-    }
-
-    pub fn fast_forward(&self) {
-        self.internal.fast_forward().expect("TODO: panic message");
-    }
-
-    pub fn rewind(&self) {
-        self.internal.rewind().expect("TODO: panic message");
-    }
-
-}
 
 impl<I, S> Clone for VideoPlayer<I, S>
 where
@@ -167,6 +175,10 @@ where
     fn swap_play_button(&self);
 
     fn swap_pause_button(&self);
+
+    fn swap_mute_button(&self);
+
+    fn swap_unmute_button(&self);
 }
 
 pub trait VideoUIRegister {

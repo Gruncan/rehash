@@ -1,5 +1,5 @@
 use crate::log;
-use crate::video::video_callback_event::{CallbackController, PlayPauseEvent, VideoCallbackEvent};
+use crate::video::video_callback_event::{CallbackController, MuteUnmuteEvent, PlayPauseEvent, VideoCallbackEvent};
 use crate::video::video_internal::{VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
 use crate::{callback_event, console_log, debug_console_log, JsResult};
@@ -9,6 +9,9 @@ use std::rc::Rc;
 use wasm_bindgen::closure::{Closure, WasmClosure};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{Document, Element, HtmlVideoElement, KeyboardEvent, SvgElement};
+
+
+const SKIP_INCREMENT: f64 = 5.0;
 
 pub(crate) type HtmlVideoPlayer<S> = VideoPlayer<HtmlVideoPlayerInternal, S>;
 type Event = Rc<RefCell<dyn VideoCallbackEvent<HtmlVideoPlayerInternal>>>;
@@ -24,11 +27,15 @@ impl VideoInternal for HtmlVideoPlayerInternal {
     }
 
     fn fast_forward(&self) -> VideoResultUnit {
-        todo!()
+        let to_move = (self.video_element.current_time() + SKIP_INCREMENT).max(self.video_element.duration());
+        self.video_element.set_current_time(to_move);
+        Ok(())
     }
 
     fn rewind(&self) -> VideoResultUnit {
-        todo!()
+        let current_time = self.video_element.current_time() - SKIP_INCREMENT.min(0f64);
+        self.video_element.set_current_time(current_time);
+        Ok(())
     }
 
     fn pause(&self) -> VideoResultUnit {
@@ -43,6 +50,14 @@ impl VideoInternal for HtmlVideoPlayerInternal {
             Ok(p) => Ok(p),
             Err(err) => Err(err.as_string().unwrap().into()),
         }
+    }
+
+    fn get_volume(&self) {
+        todo!()
+    }
+
+    fn get_playback_time(&self) {
+        todo!()
     }
 }
 
@@ -65,6 +80,8 @@ pub(crate) struct HtmlVideoUIController {
     document: Document,
     play_icon: SvgElement,
     pause_icon: SvgElement,
+    volume_icon: SvgElement,
+    muted_icon: SvgElement,
 }
 
 
@@ -79,6 +96,16 @@ impl VideoUIController<HtmlVideoPlayerInternal> for HtmlVideoUIController {
         self.play_icon.style().set_property("display", "block").expect("Failed to set play icon");
         self.pause_icon.style().set_property("display", "none").expect("Failed to set pause icon");
     }
+
+    fn swap_mute_button(&self) {
+        self.muted_icon.style().set_property("display", "block").expect("Failed to set mute icon");
+        self.volume_icon.style().set_property("display", "none").expect("Failed to set volume icon");
+    }
+
+    fn swap_unmute_button(&self) {
+        self.muted_icon.style().set_property("display", "none").expect("Failed to set mute icon");
+        self.volume_icon.style().set_property("display", "block").expect("Failed to set volume icon");
+    }
 }
 
 impl VideoUIRegister for HtmlVideoUIController {
@@ -89,6 +116,7 @@ impl VideoUIRegister for HtmlVideoUIController {
     }
 
     fn register_element_event_listener<T: ?Sized + WasmClosure>(&self, ids: Vec<String>, closure: Box<Closure<T>>) {
+        console_log!("{:?}", ids);
         for key in ids {
             if let Some(element) = self.document.get_element_by_id(key.as_str()) {
                 element.add_event_listener_with_callback("click", closure.as_ref().as_ref().unchecked_ref())
@@ -104,25 +132,38 @@ impl HtmlVideoUIController {
     const PAUSE_ICON_ID: &'static str = "pause-icon";
     const PLAY_PAUSE_ID: &'static str = "play-pause";
 
+    const VOLUME_ICON_ID: &'static str = "volume-icon";
+    const MUTE_ICON_ID: &'static str = "mute-icon";
+    const MUTE_UNMUTE_ID: &'static str = "volume-btn";
+
 
     pub fn new(document: Document) -> Self {
-        let play_icon = document.get_element_by_id(Self::PLAY_ICON_ID)
-            .expect("Failed to get play-icon")
-            .dyn_into::<SvgElement>()
-            .expect("Failed to cast SvgElement");
+        let play_icon = Self::get_icon(&document, Self::PLAY_ICON_ID);
 
-        let pause_icon = document.get_element_by_id(Self::PAUSE_ICON_ID)
-            .expect("Failed to get pause-icon")
-            .dyn_into::<SvgElement>()
-            .expect("Failed to cast SvgElement");
+        let pause_icon = Self::get_icon(&document, Self::PAUSE_ICON_ID);
+
+        let volume_icon = Self::get_icon(&document, Self::VOLUME_ICON_ID);
+
+        let muted_icon = Self::get_icon(&document, Self::MUTE_ICON_ID);
 
         Self {
             document,
             play_icon,
             pause_icon,
+            volume_icon,
+            muted_icon,
         }
     }
+
+    #[inline]
+    fn get_icon(document: &Document, id: &str) -> SvgElement {
+        document.get_element_by_id(id)
+            .expect("Failed to get play-icon")
+            .dyn_into::<SvgElement>()
+            .expect("Failed to cast SvgElement")
+    }
 }
+
 
 pub(crate) struct HtmlVideoCallbackController {
     video_player: SharedVideoPlayer,
@@ -134,16 +175,20 @@ pub(crate) struct HtmlVideoCallbackController {
 
 impl HtmlVideoCallbackController {
     const PLAY_PAUSE_ID: &'static str = "play-pause";
+    const MUTE_UNMUTE_ID: &'static str = "volume-btn";
 
     pub fn new(video_player: SharedVideoPlayer, ui_controller: HtmlVideoUIController) -> Self {
         let play_pause_event: Event = callback_event!(PlayPauseEvent);
+        let mute_unmute_event: Event = callback_event!(MuteUnmuteEvent);
 
         let keyboard_events: HashMap<String, Event> = HashMap::from([
-            ("p".to_string(), play_pause_event.clone())
+            ("p".to_string(), play_pause_event.clone()),
+            ("m".to_string(), mute_unmute_event.clone()),
         ]);
 
         let control_events: HashMap<String, Event> = HashMap::from([
-            (Self::PLAY_PAUSE_ID.to_string(), play_pause_event.clone())
+            (Self::PLAY_PAUSE_ID.to_string(), play_pause_event.clone()),
+            (Self::MUTE_UNMUTE_ID.to_string(), mute_unmute_event.clone()),
         ]);
 
         Self {
@@ -167,20 +212,23 @@ impl CallbackController for HtmlVideoCallbackController {
         }));
 
         self.ui_controller.register_global_event_listener(keyboard_closure);
-
         let mut video_player_c = self.video_player.clone();
         let c = self.callback_control_events.clone();
+        console_log!("{:?}", c);
         let control_closure: Box<Closure<dyn FnMut(web_sys::Event)>> = Box::new(Closure::new(move |event: web_sys::Event| {
             let target = event.current_target().expect("Failed to get target for control callback");
+            console_log!("{:?}", target);
             if let Some(element) = target.dyn_ref::<Element>() {
                 let id = element.id();
+                console_log!("Clicked Id: {}", id);
                 if let Err(e) = callback_handler(&mut video_player_c, c.get(&id)) {
                     console_log!("Id: {}", id);
                 }
             }
         }));
 
-        self.ui_controller.register_element_event_listener(vec!(Self::PLAY_PAUSE_ID.to_string()), control_closure);
+        let keys: Vec<String> = self.callback_control_events.iter().map(|(k, _)| k.clone()).collect();
+        self.ui_controller.register_element_event_listener(keys, control_closure);
     }
 }
 

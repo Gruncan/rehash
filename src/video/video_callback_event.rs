@@ -3,6 +3,7 @@ use crate::video::video_player::{get_state_owned, Paused, Playing, SharedVideoPl
 use crate::JsResult;
 use std::any::TypeId;
 use std::cell::RefCell;
+use std::fmt::Debug;
 use std::ops::Deref;
 use std::rc::Rc;
 
@@ -14,7 +15,7 @@ pub(crate) trait CallbackController {
 }
 
 
-pub(crate) trait VideoCallbackEvent<I>
+pub(crate) trait VideoCallbackEvent<I>: Debug
 where
     I: VideoInternal,
 {
@@ -22,10 +23,22 @@ where
 }
 
 
+#[macro_export]
+macro_rules! callback_event {
+    ($t:ty) => {
+        std::rc::Rc::new(std::cell::RefCell::new(<$t>::new()))
+    };
+    ($t:ty, $($args:expr),*) => {
+        std::rc::Rc::new(std::cell::RefCell::new(<$t>::new($($args),*)))
+    }
+}
+
+
+
+#[derive(Debug)]
 pub(crate) struct PlayPauseEvent {
     type_id: TypeId,
 }
-
 
 impl<I> VideoCallbackEvent<I> for PlayPauseEvent
 where
@@ -55,7 +68,7 @@ where
 
 impl PlayPauseEvent {
     pub fn new() -> Self {
-        PlayPauseEvent {
+        Self {
             type_id: TypeId::of::<Paused>(),
         }
     }
@@ -65,14 +78,47 @@ impl PlayPauseEvent {
     }
 }
 
-#[macro_export]
-macro_rules! callback_event {
-    ($t:ty) => {
-        std::rc::Rc::new(std::cell::RefCell::new(<$t>::new()))
-    };
-    ($t:ty, $($args:expr),*) => {
-        std::rc::Rc::new(std::cell::RefCell::new(<$t>::new($($args),*)))
+
+enum Muted {}
+enum Unmuted {}
+
+#[derive(Debug)]
+pub(crate) struct MuteUnmuteEvent {
+    type_id: TypeId,
+}
+
+impl<I> VideoCallbackEvent<I> for MuteUnmuteEvent
+where
+    I: VideoInternal + 'static,
+{
+    fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        let mutex = ctx.lock().unwrap();
+        let cell = mutex;
+
+        if self.is_unmuted() {
+            cell.deref().mute();
+            self.type_id = TypeId::of::<Muted>();
+        } else {
+            cell.deref().unmute();
+            self.type_id = TypeId::of::<Unmuted>();
+        }
+
+        Ok(())
     }
 }
+
+
+impl MuteUnmuteEvent {
+    pub fn new() -> Self {
+        Self {
+            type_id: TypeId::of::<Unmuted>(),
+        }
+    }
+
+    pub fn is_unmuted(&self) -> bool {
+        self.type_id == TypeId::of::<Unmuted>()
+    }
+}
+
 
 
