@@ -6,9 +6,11 @@ mod video;
 use crate::prelude::*;
 use crate::video::html_video::{HtmlVideoCallbackController, HtmlVideoPlayerInternal, HtmlVideoUIController};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController};
+use js_sys::Reflect;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use video::video_callback_event::*;
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::HtmlVideoElement;
@@ -47,17 +49,27 @@ async fn init() -> JsResult<()> {
         .ok_or("Failed to get video player")?
         .dyn_into::<HtmlVideoElement>()?;
 
-    console_log!("Before load");
-    video_element.set_src("pkg/66WithFacesV6Audio.mp4");
+    // video_element.set_src("/static/pkg/66WithFacesV6Audio.mp4");
 
 
     let html_controller = HtmlVideoUIController::new(document.clone());
-    let video_player = create_shared_video_player(Rc::new(html_controller), video_element);
+    let video_player = create_shared_video_player(Rc::new(html_controller), video_element.clone());
 
     let html_controller = HtmlVideoUIController::new(document.clone());
     let callback_controller = HtmlVideoCallbackController::new(video_player.clone(), html_controller);
     callback_controller.register_events();
 
+    let open_closure: Box<Closure<dyn FnMut(JsValue)>> = Box::new(Closure::new(move |event: JsValue| {
+        let payload = Reflect::get(&event, &JsValue::from_str("payload")).expect("Failed to get payload");
+        let video_path = payload.as_string().expect("Failed to get video path");
+        debug_console_log!("Video path: {:?}", video_path);
+
+        video_element.set_src(&video_path);
+    }));
+
+    tauri_listen("select-video-event", open_closure.as_ref().as_ref().unchecked_ref());
+
+    open_closure.forget();
 
     Ok(())
 }

@@ -9,6 +9,7 @@
     "beforeBuildCommand": "wasm-pack build --target web --out-dir ../static/pkg --dev"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "Rehash",

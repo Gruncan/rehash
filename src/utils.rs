@@ -13,8 +13,11 @@ extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     pub(crate) fn error(s: &str);
 
-    #[wasm_bindgen(js_namespace = ["__TAURI_INTERNALS__"], js_name = invoke)]
+    #[wasm_bindgen(js_namespace=["__TAURI_INTERNALS__"], js_name = invoke)]
     fn tauri_invoke(cmd: &str, args: JsValue);
+
+    #[wasm_bindgen(js_namespace=["__TAURI__", "event"], js_name=listen)]
+    pub(crate) fn tauri_listen(event_name: &str, callback: &js_sys::Function);
 }
 
 pub fn log_to_tauri(msg: &str) {
