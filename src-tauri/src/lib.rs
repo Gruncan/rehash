@@ -4,6 +4,13 @@ use tauri::Window;
 use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::{DialogExt, FileDialogBuilder, FilePath};
 
+pub const DESKTOP_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[tauri::command]
+fn get_desktop_build() -> &'static str {
+    DESKTOP_VERSION
+}
+
 #[tauri::command]
 fn wasm_log(message: String) {
     println!("[WASM] {}", message);
@@ -69,7 +76,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![wasm_log, get_video_bytes])
+        .invoke_handler(tauri::generate_handler![wasm_log, get_video_bytes, get_desktop_build])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

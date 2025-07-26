@@ -10,6 +10,8 @@ use wasm_bindgen::JsValue;
 
 pub type SharedVideoPlayer = Arc<Mutex<Box<dyn VideoPlayerState>>>;
 
+pub type VideoPlayerResult<I, S: VideoPlayerTypeState> = Result<VideoPlayer<I, S>, VideoPlayer<I, S::FallbackState>>;
+
 
 pub struct VideoPlayer<I, S>
 where
@@ -155,11 +157,15 @@ impl<I> VideoPlayer<I, Paused>
 where
     I: VideoInternal + 'static,
 {
-    pub(crate) fn play(self) -> VideoPlayer<I, Playing> {
+    pub(crate) fn play(self) -> VideoPlayerResult<I, Playing> {
         // should probably return a 'future' type state e.g. WaitingToPlay
-        let _ = self.internal.play().expect("Failed to play");
-        self.video_controller.swap_play_button();
-        self.transition()
+        if let Ok(playing) = self.internal.play() {
+            self.video_controller.swap_play_button();
+            Ok(self.transition())
+        } else {
+            Err(self.transition())
+        }
+
     }
 }
 
@@ -167,25 +173,33 @@ impl<I> VideoPlayer<I, Playing>
 where
     I: VideoInternal + 'static,
 {
-    pub(crate) fn pause(self) -> VideoPlayer<I, Paused> {
+    pub(crate) fn pause(self) -> VideoPlayerResult<I, Paused> {
         let _ = self.internal.pause().expect("Failed to pause");
         self.video_controller.swap_pause_button();
-        self.transition()
+        Ok(self.transition())
     }
 
 }
 
 pub trait VideoPlayerTypeState {
-
+    type FallbackState;
 }
 
 pub enum Uninitialized {}
 pub enum Paused {}
 pub enum Playing {}
 
-impl VideoPlayerTypeState for Uninitialized {}
-impl VideoPlayerTypeState for Paused {}
-impl VideoPlayerTypeState for Playing {}
+impl VideoPlayerTypeState for Uninitialized {
+    type FallbackState = Uninitialized;
+}
+
+impl VideoPlayerTypeState for Paused {
+    type FallbackState = Playing;
+}
+
+impl VideoPlayerTypeState for Playing {
+    type FallbackState = Paused;
+}
 
 
 pub trait VideoUIController<I>

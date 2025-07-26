@@ -2,10 +2,11 @@ use crate::event::CallbackController;
 use crate::get_element_as;
 use crate::prelude::*;
 use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, MuteUnmuteEvent, PlayPauseEvent, ProgressBarEvent};
-use crate::video::video_internal::{VideoInternal, VideoResult, VideoResultUnit};
+use crate::video::video_internal::{InternalVideoError, VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
 use crate::{callback_event, console_log, debug_console_log, JsResult};
 use std::cell::RefCell;
+use std::cmp::PartialOrd;
 use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::closure::{Closure, WasmClosure};
@@ -20,6 +21,31 @@ type Event = Rc<RefCell<dyn CallbackEvent<SharedVideoPlayer>>>;
 pub(crate) struct HtmlVideoPlayerInternal {
     video_element: HtmlVideoElement,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
+pub(crate) enum InternalVideoReadiness {
+    Nothing,
+    MedaData,
+    CurrentData,
+    FutureData,
+    AllData,
+    Unknown(u16),
+}
+
+impl From<u16> for InternalVideoReadiness {
+    fn from(value: u16) -> Self {
+        match value {
+            0 => InternalVideoReadiness::Nothing,
+            1 => InternalVideoReadiness::MedaData,
+            2 => InternalVideoReadiness::CurrentData,
+            3 => InternalVideoReadiness::FutureData,
+            4 => InternalVideoReadiness::AllData,
+            other => InternalVideoReadiness::Unknown(other),
+        }
+    }
+}
+
+
 
 
 #[macro_export]
@@ -60,9 +86,14 @@ impl VideoInternal for HtmlVideoPlayerInternal {
     }
 
     fn play(&self) -> VideoResult<::js_sys::Promise> {
-        match self.video_element.play() {
-            Ok(p) => Ok(p),
-            Err(err) => Err(err.as_string().unwrap().into()),
+        let state: InternalVideoReadiness = self.video_element.ready_state().into();
+        if state >= InternalVideoReadiness::CurrentData {
+            match self.video_element.play() {
+                Ok(p) => Ok(p),
+                Err(err) => Err(err.as_string().unwrap().into()),
+            }
+        } else {
+            Err(InternalVideoError("Video not ready".to_string()))
         }
     }
 

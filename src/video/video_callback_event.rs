@@ -47,14 +47,26 @@ where
         let standard: Box<dyn VideoPlayerState>;
         if self.is_paused() {
             let video_paused: VideoPlayer<I, Paused> = get_state_owned(cell.deref())?;
-            let video: VideoPlayer<I, Playing> = video_paused.play();
-            self.type_id = TypeId::of::<Playing>();
-            standard = Box::new(video);
+            match video_paused.play() {
+                Ok(video) => {
+                    self.type_id = TypeId::of::<Playing>();
+                    standard = Box::new(video);
+                },
+                Err(video) => {
+                    standard = Box::new(video);
+                }
+            }
         } else {
             let video_playing: VideoPlayer<I, Playing> = get_state_owned(cell.deref())?;
-            let video: VideoPlayer<I, Paused> = video_playing.pause();
-            self.type_id = TypeId::of::<Paused>();
-            standard = Box::new(video);
+            match video_playing.pause() {
+                Ok(video) => {
+                    self.type_id = TypeId::of::<Paused>();
+                    standard = Box::new(video);
+                },
+                Err(video) => {
+                    standard = Box::new(video);
+                }
+            }
         }
         *cell = standard;
 
