@@ -5,7 +5,8 @@
   "identifier": "dev.gruncan.rehash",
   "build": {
     "frontendDist": "../static",
-    "beforeBuildCommand": "../build.sh"
+    "beforeDevCommand": "wasm-pack build --target web --out-dir ../static/pkg --dev",
+    "beforeBuildCommand": "wasm-pack build --target web --out-dir ../static/pkg --dev"
   },
   "app": {
     "windows": [

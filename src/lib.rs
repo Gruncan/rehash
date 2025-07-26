@@ -47,8 +47,8 @@ async fn init() -> JsResult<()> {
         .ok_or("Failed to get video player")?
         .dyn_into::<HtmlVideoElement>()?;
 
-    video_element.set_src("../pkg/66WithFacesV6Audio.mp4");
-    video_element.set_muted(true);
+    console_log!("Before load");
+    video_element.set_src("pkg/66WithFacesV6Audio.mp4");
 
 
     let html_controller = HtmlVideoUIController::new(document.clone());

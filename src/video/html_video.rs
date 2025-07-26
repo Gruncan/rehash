@@ -1,5 +1,5 @@
 use crate::get_element_as;
-use crate::log;
+use crate::prelude::*;
 use crate::video::video_callback_event::{CallbackController, MuteUnmuteEvent, PlayPauseEvent, ProgressBarEvent, VideoCallbackEvent, VideoCallbackEventInit};
 use crate::video::video_internal::{VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
@@ -10,7 +10,6 @@ use std::rc::Rc;
 use wasm_bindgen::closure::{Closure, WasmClosure};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{Document, Element, HtmlSpanElement, HtmlVideoElement, KeyboardEvent, SvgElement};
-
 
 const SKIP_INCREMENT: f64 = 5.0;
 

@@ -1,4 +1,10 @@
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+#[tauri::command]
+fn wasm_log(message: String) {
+    println!("[WASM] {}", message);
+}
+
+
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
@@ -11,6 +17,7 @@ pub fn run() {
             }
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![wasm_log])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
