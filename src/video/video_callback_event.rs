@@ -88,34 +88,26 @@ enum Muted {}
 enum Unmuted {}
 
 
-pub(crate) struct MuteUnmuteEvent<I> {
+pub(crate) struct MuteUnmuteEvent {
     type_id: TypeId,
-    marker: std::marker::PhantomData<I>,
 }
 
 
-impl<I> CallbackEventInit for MuteUnmuteEvent<I> {
+impl CallbackEventInit for MuteUnmuteEvent {
     fn new() -> Self {
         Self {
-            marker: std::marker::PhantomData,
             type_id: TypeId::of::<Unmuted>(),
         }
     }
 }
 
-impl<I> Debug for MuteUnmuteEvent<I>
-where
-
-{
+impl Debug for MuteUnmuteEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
 
-impl<I> CallbackEvent<SharedVideoPlayer> for MuteUnmuteEvent<I>
-where
-    I: VideoInternal + 'static,
-{
+impl CallbackEvent<SharedVideoPlayer> for MuteUnmuteEvent {
     fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
         let mutex = ctx.lock().unwrap();
         let video_player_state = mutex.deref();
@@ -133,43 +125,31 @@ where
 }
 
 
-impl<I> MuteUnmuteEvent<I> {
+impl MuteUnmuteEvent {
 
     pub fn is_unmuted(&self) -> bool {
         self.type_id == TypeId::of::<Unmuted>()
     }
 }
 
-pub(crate) struct ProgressBarEvent<I>
-where
-    I: VideoInternal + 'static,
-{
-    marker: std::marker::PhantomData<I>,
+pub(crate) struct ProgressBarEvent {
+
 }
 
-impl<I> CallbackEventInit for ProgressBarEvent<I>
-where
-    I: VideoInternal + 'static,
-{
+impl CallbackEventInit for ProgressBarEvent {
     fn new() -> Self {
-        Self { marker: Default::default() }
+        Self {}
     }
 }
 
-impl<I> Debug for ProgressBarEvent<I>
-where
-    I: 'static + VideoInternal,
-{
+impl Debug for ProgressBarEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
 
 
-impl<I> CallbackEvent<SharedVideoPlayer> for ProgressBarEvent<I>
-where
-    I: VideoInternal + 'static,
-{
+impl CallbackEvent<SharedVideoPlayer> for ProgressBarEvent {
     fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
         let mutex = ctx.lock().unwrap();
         let cell = mutex.deref();
@@ -180,9 +160,27 @@ where
     }
 }
 
-impl<I> ProgressBarEvent<I>
-where
-    I: VideoInternal + 'static,
-{}
+
+pub(crate) struct SettingsEvent {}
+
+impl CallbackEventInit for SettingsEvent {
+    fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Debug for SettingsEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+
+impl CallbackEvent<SharedVideoPlayer> for SettingsEvent
+{
+    fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        Ok(())
+    }
+}
 
 

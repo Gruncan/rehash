@@ -1,7 +1,7 @@
 use crate::event::CallbackController;
 use crate::get_element_as;
 use crate::prelude::*;
-use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, MuteUnmuteEvent, PlayPauseEvent, ProgressBarEvent};
+use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, MuteUnmuteEvent, PlayPauseEvent, ProgressBarEvent, SettingsEvent};
 use crate::video::video_internal::{InternalVideoError, VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
 use crate::{callback_event, console_log, debug_console_log, JsResult};
@@ -139,6 +139,7 @@ pub(crate) struct HtmlVideoUIController {
     total_time: HtmlSpanElement,
     progress_fill: HtmlDivElement,
     progress_left: HtmlDivElement,
+    settings_icon: SvgElement,
 }
 
 
@@ -225,6 +226,8 @@ impl HtmlVideoUIController {
     const PROGRESS_FILL: &'static str = "progress-fill";
     const PROGRESS_LEFT: &'static str = "progress-handle";
 
+    const SETTINGS_ICON_ID: &'static str = "settings-icon";
+
     const VIDEO_ID: &'static str = "video-player";
 
 
@@ -241,6 +244,7 @@ impl HtmlVideoUIController {
         let progress_fill = get_element_as!(&document, Self::PROGRESS_FILL, HtmlDivElement);
         let progress_left = get_element_as!(&document, Self::PROGRESS_LEFT, HtmlDivElement);
 
+        let settings_icon = get_element_as!(&document, Self::SETTINGS_ICON_ID, SvgElement);
 
         let video_element = get_element_as!(&document, Self::VIDEO_ID, HtmlVideoElement);
 
@@ -256,6 +260,7 @@ impl HtmlVideoUIController {
             total_time,
             progress_fill,
             progress_left,
+            settings_icon,
         }
     }
 
@@ -275,11 +280,13 @@ pub(crate) struct HtmlVideoCallbackController {
 impl HtmlVideoCallbackController {
     const PLAY_PAUSE_ID: &'static str = "play-pause";
     const MUTE_UNMUTE_ID: &'static str = "volume-btn";
+    const SETTINGS_ID: &'static str = "settings";
 
     pub fn new(video_player: SharedVideoPlayer, ui_controller: HtmlVideoUIController) -> Self {
         let play_pause_event: Event = callback_event!(PlayPauseEvent<HtmlVideoPlayerInternal>);
-        let mute_unmute_event: Event = callback_event!(MuteUnmuteEvent<HtmlVideoPlayerInternal>);
-        let progress_event: Event = callback_event!(ProgressBarEvent<HtmlVideoPlayerInternal>);
+        let mute_unmute_event: Event = callback_event!(MuteUnmuteEvent);
+        let progress_event: Event = callback_event!(ProgressBarEvent);
+        let settings_event: Event = callback_event!(SettingsEvent);
 
         let keyboard_events: HashMap<String, Event> = HashMap::from([
             ("p".to_string(), play_pause_event.clone()),
@@ -289,6 +296,7 @@ impl HtmlVideoCallbackController {
         let control_events: HashMap<String, Event> = HashMap::from([
             (Self::PLAY_PAUSE_ID.to_string(), play_pause_event.clone()),
             (Self::MUTE_UNMUTE_ID.to_string(), mute_unmute_event.clone()),
+            (Self::SETTINGS_ID.to_string(), settings_event.clone())
         ]);
 
 
