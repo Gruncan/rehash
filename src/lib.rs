@@ -114,7 +114,7 @@ async fn init() -> JsResult<()> {
 
 
         spawn_local(async move {
-            load_video_blob(&video_element, "/home/duncan/Development/Rust/rehash/static/pkg/66WithFacesV6Audio.mp4").await;
+            load_video_blob(&video_element, video_path.as_str()).await;
         });
         // let value = tauri_convert_file_src("/home/duncan/Development/Rust/rehash/static/pkg/66WithFacesV6Audio.mp4", None);
         // let source = value.as_string().unwrap();
