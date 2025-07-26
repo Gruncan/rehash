@@ -6,7 +6,7 @@
   "build": {
     "frontendDist": "../static",
     "beforeDevCommand": "wasm-pack build --target web --out-dir ../static/pkg --dev",
-    "beforeBuildCommand": "wasm-pack build --target web --out-dir ../static/pkg --dev"
+    "beforeBuildCommand": null
   },
   "app": {
     "withGlobalTauri": true,

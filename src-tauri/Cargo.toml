@@ -1,6 +1,6 @@
 [package]
 name = "rehash-desktop"
-version = "0.1.0"
+version = "0.1.1"
 description = "Rehash desktop"
 authors = ["Gruncan"]
 license = ""
@@ -15,10 +15,10 @@ name = "rehash_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.1.1" }
+tauri-build = { version = "2.1.1", features = [] }
 
 [dependencies]
 log = "0.4"
-tauri = { version = "2.4.1" }
+tauri = { version = "2.4.1", features = [] }
 tauri-plugin-log = "2.0.0-rc"
 tauri-plugin-dialog = "2"

@@ -44,12 +44,6 @@ pub fn run() {
 
             let app_submenu = SubmenuBuilder::new(app, "File")
                 .item(&open)
-                .separator()
-                .services()
-                .separator()
-                .hide()
-                .hide_others()
-                .quit()
                 .build()?;
 
             let menu = MenuBuilder::new(app)
