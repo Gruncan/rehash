@@ -1,7 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "rehash",
-  "version": "0.1.0",
   "identifier": "dev.gruncan.rehash",
   "build": {
     "frontendDist": "../static",
@@ -13,8 +12,8 @@
     "windows": [
       {
         "title": "Rehash",
-        "width": 800,
-        "height": 600,
+        "width": 1920,
+        "height": 1080,
         "resizable": true,
         "fullscreen": false
       }
