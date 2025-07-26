@@ -1,6 +1,7 @@
 pub(crate) use crate::event::{CallbackEvent, CallbackEventInit};
 use crate::video::video_internal::VideoInternal;
 use crate::video::video_player::{get_state_owned, Paused, Playing, SharedVideoPlayer, VideoPlayer, VideoPlayerState};
+use crate::{debug_console_log, log_to_tauri};
 use crate::JsResult;
 use std::any::TypeId;
 use std::fmt::{Debug, Formatter};
@@ -132,24 +133,24 @@ impl MuteUnmuteEvent {
     }
 }
 
-pub(crate) struct ProgressBarEvent {
+pub(crate) struct ProgressBarChangeEvent {
 
 }
 
-impl CallbackEventInit for ProgressBarEvent {
+impl CallbackEventInit for ProgressBarChangeEvent {
     fn new() -> Self {
         Self {}
     }
 }
 
-impl Debug for ProgressBarEvent {
+impl Debug for ProgressBarChangeEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
 
 
-impl CallbackEvent<SharedVideoPlayer> for ProgressBarEvent {
+impl CallbackEvent<SharedVideoPlayer> for ProgressBarChangeEvent {
     fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
         let mutex = ctx.lock().unwrap();
         let cell = mutex.deref();
@@ -179,8 +180,35 @@ impl Debug for SettingsEvent {
 impl CallbackEvent<SharedVideoPlayer> for SettingsEvent
 {
     fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        debug_console_log!("Triggering settings");
         Ok(())
     }
 }
+
+
+pub(crate) struct FullScreenEvent {}
+
+impl CallbackEventInit for FullScreenEvent {
+    fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Debug for FullScreenEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+
+impl CallbackEvent<SharedVideoPlayer> for FullScreenEvent
+{
+    fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        debug_console_log!("Triggering fullscreen");
+        Ok(())
+    }
+}
+
+
 
 

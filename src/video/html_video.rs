@@ -1,7 +1,7 @@
 use crate::event::CallbackController;
 use crate::get_element_as;
 use crate::prelude::*;
-use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, MuteUnmuteEvent, PlayPauseEvent, ProgressBarEvent, SettingsEvent};
+use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, FullScreenEvent, MuteUnmuteEvent, PlayPauseEvent, ProgressBarChangeEvent, SettingsEvent};
 use crate::video::video_internal::{InternalVideoError, VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
 use crate::{callback_event, console_log, debug_console_log, JsResult};
@@ -140,6 +140,7 @@ pub(crate) struct HtmlVideoUIController {
     progress_fill: HtmlDivElement,
     progress_left: HtmlDivElement,
     settings_icon: SvgElement,
+    fullscreen_icon: SvgElement,
 }
 
 
@@ -194,7 +195,7 @@ impl VideoUIRegister for HtmlVideoUIController {
     }
 
     fn register_element_event_listener<T: ?Sized + WasmClosure>(&self, ids: Vec<String>, closure: Box<Closure<T>>) {
-        console_log!("{:?}", ids);
+        debug_console_log!("Registers control events: {:?}", ids);
         for key in ids {
             if let Some(element) = self.document.get_element_by_id(key.as_str()) {
                 element.add_event_listener_with_callback("click", closure.as_ref().as_ref().unchecked_ref())
@@ -214,11 +215,9 @@ impl VideoUIRegister for HtmlVideoUIController {
 impl HtmlVideoUIController {
     const PLAY_ICON_ID: &'static str = "play-icon";
     const PAUSE_ICON_ID: &'static str = "pause-icon";
-    const PLAY_PAUSE_ID: &'static str = "play-pause";
 
     const VOLUME_ICON_ID: &'static str = "volume-icon";
     const MUTE_ICON_ID: &'static str = "mute-icon";
-    const MUTE_UNMUTE_ID: &'static str = "volume-btn";
 
     const CURRENT_TIME_ID: &'static str = "current-time";
     const TOTAL_TIME_ID: &'static str = "total-time";
@@ -227,6 +226,7 @@ impl HtmlVideoUIController {
     const PROGRESS_LEFT: &'static str = "progress-handle";
 
     const SETTINGS_ICON_ID: &'static str = "settings-icon";
+    const FULLSCREEN_ICON_ID: &'static str = "fullscreen-icon";
 
     const VIDEO_ID: &'static str = "video-player";
 
@@ -245,6 +245,7 @@ impl HtmlVideoUIController {
         let progress_left = get_element_as!(&document, Self::PROGRESS_LEFT, HtmlDivElement);
 
         let settings_icon = get_element_as!(&document, Self::SETTINGS_ICON_ID, SvgElement);
+        let fullscreen_icon = get_element_as!(&document, Self::FULLSCREEN_ICON_ID, SvgElement);
 
         let video_element = get_element_as!(&document, Self::VIDEO_ID, HtmlVideoElement);
 
@@ -261,6 +262,7 @@ impl HtmlVideoUIController {
             progress_fill,
             progress_left,
             settings_icon,
+            fullscreen_icon,
         }
     }
 
@@ -281,12 +283,14 @@ impl HtmlVideoCallbackController {
     const PLAY_PAUSE_ID: &'static str = "play-pause";
     const MUTE_UNMUTE_ID: &'static str = "volume-btn";
     const SETTINGS_ID: &'static str = "settings";
+    const FULLSCREEN_ID: &'static str = "fullscreen";
 
     pub fn new(video_player: SharedVideoPlayer, ui_controller: HtmlVideoUIController) -> Self {
         let play_pause_event: Event = callback_event!(PlayPauseEvent<HtmlVideoPlayerInternal>);
         let mute_unmute_event: Event = callback_event!(MuteUnmuteEvent);
-        let progress_event: Event = callback_event!(ProgressBarEvent);
+        let progress_event: Event = callback_event!(ProgressBarChangeEvent);
         let settings_event: Event = callback_event!(SettingsEvent);
+        let fullscreen_event: Event = callback_event!(FullScreenEvent);
 
         let keyboard_events: HashMap<String, Event> = HashMap::from([
             ("p".to_string(), play_pause_event.clone()),
@@ -296,7 +300,8 @@ impl HtmlVideoCallbackController {
         let control_events: HashMap<String, Event> = HashMap::from([
             (Self::PLAY_PAUSE_ID.to_string(), play_pause_event.clone()),
             (Self::MUTE_UNMUTE_ID.to_string(), mute_unmute_event.clone()),
-            (Self::SETTINGS_ID.to_string(), settings_event.clone())
+            (Self::SETTINGS_ID.to_string(), settings_event.clone()),
+            (Self::FULLSCREEN_ID.to_string(), fullscreen_event.clone()),
         ]);
 
 
@@ -333,12 +338,11 @@ impl CallbackController for HtmlVideoCallbackController {
         let c = self.callback_control_events.clone();
         let control_closure: Box<Closure<dyn FnMut(web_sys::Event)>> = Box::new(Closure::new(move |event: web_sys::Event| {
             let target = event.current_target().expect("Failed to get target for control callback");
-            console_log!("{:?}", target);
+
             if let Some(element) = target.dyn_ref::<Element>() {
                 let id = element.id();
-                console_log!("Clicked Id: {}", id);
                 if let Err(e) = callback_handler(&mut video_player_c, c.get(&id)) {
-                    console_log!("Id: {}", id);
+                    console_log!("Failed callback on ID: {}", id);
                 }
             }
         }));
