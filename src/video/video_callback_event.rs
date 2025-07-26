@@ -1,60 +1,42 @@
+pub(crate) use crate::event::{CallbackEvent, CallbackEventInit};
 use crate::video::video_internal::VideoInternal;
 use crate::video::video_player::{get_state_owned, Paused, Playing, SharedVideoPlayer, VideoPlayer, VideoPlayerState};
 use crate::JsResult;
 use std::any::TypeId;
-use std::cell::RefCell;
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
-use std::rc::Rc;
-
-pub(crate) type VideoCallbackEventType<T> = Rc<RefCell<T>>;
 
 
-pub(crate) trait CallbackController {
-    fn register_events(&self);
-}
-
-
-pub(crate) trait VideoCallbackEvent<I>: Debug
+pub(crate) struct PlayPauseEvent<I>
 where
-    I: VideoInternal,
+    I: VideoInternal + 'static,
 {
-    fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()>;
-}
-
-pub(crate) trait VideoCallbackEventInit {
-    // Forces callback_event marco to work correctly
-    fn new() -> Self;
-}
-
-#[macro_export]
-macro_rules! callback_event {
-    ($t:ty) => {
-        std::rc::Rc::new(std::cell::RefCell::new(<$t>::new()))
-    };
-
-    // Maybe needed at some point
-    // ($t:ty, $($args:expr),*) => {
-    //     std::rc::Rc::new(std::cell::RefCell::new(<$t>::new($($args),*)))
-    // }
-}
-
-
-
-#[derive(Debug)]
-pub(crate) struct PlayPauseEvent {
+    marker: std::marker::PhantomData<I>,
     type_id: TypeId,
 }
 
-impl VideoCallbackEventInit for PlayPauseEvent {
+impl<I> CallbackEventInit for PlayPauseEvent<I>
+where
+    I: VideoInternal + 'static,
+{
     fn new() -> Self {
         Self {
+            marker: std::marker::PhantomData,
             type_id: TypeId::of::<Paused>(),
         }
     }
 }
 
-impl<I> VideoCallbackEvent<I> for PlayPauseEvent
+impl<I> Debug for PlayPauseEvent<I>
+where
+    I: 'static + VideoInternal,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl<I> CallbackEvent<SharedVideoPlayer> for PlayPauseEvent<I>
 where
     I: VideoInternal + 'static,
 {
@@ -80,8 +62,10 @@ where
     }
 }
 
-impl PlayPauseEvent {
-
+impl<I> PlayPauseEvent<I>
+where
+    I: VideoInternal + 'static,
+{
     pub fn is_paused(&self) -> bool {
         self.type_id == TypeId::of::<Paused>()
     }
@@ -91,21 +75,32 @@ impl PlayPauseEvent {
 enum Muted {}
 enum Unmuted {}
 
-#[derive(Debug)]
-pub(crate) struct MuteUnmuteEvent {
+
+pub(crate) struct MuteUnmuteEvent<I> {
     type_id: TypeId,
+    marker: std::marker::PhantomData<I>,
 }
 
 
-impl VideoCallbackEventInit for MuteUnmuteEvent {
+impl<I> CallbackEventInit for MuteUnmuteEvent<I> {
     fn new() -> Self {
         Self {
+            marker: std::marker::PhantomData,
             type_id: TypeId::of::<Unmuted>(),
         }
     }
 }
 
-impl<I> VideoCallbackEvent<I> for MuteUnmuteEvent
+impl<I> Debug for MuteUnmuteEvent<I>
+where
+
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl<I> CallbackEvent<SharedVideoPlayer> for MuteUnmuteEvent<I>
 where
     I: VideoInternal + 'static,
 {
@@ -126,24 +121,40 @@ where
 }
 
 
-impl MuteUnmuteEvent {
+impl<I> MuteUnmuteEvent<I> {
 
     pub fn is_unmuted(&self) -> bool {
         self.type_id == TypeId::of::<Unmuted>()
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct ProgressBarEvent {}
+pub(crate) struct ProgressBarEvent<I>
+where
+    I: VideoInternal + 'static,
+{
+    marker: std::marker::PhantomData<I>,
+}
 
-impl VideoCallbackEventInit for ProgressBarEvent {
+impl<I> CallbackEventInit for ProgressBarEvent<I>
+where
+    I: VideoInternal + 'static,
+{
     fn new() -> Self {
-        Self {}
+        Self { marker: Default::default() }
+    }
+}
+
+impl<I> Debug for ProgressBarEvent<I>
+where
+    I: 'static + VideoInternal,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
     }
 }
 
 
-impl<I> VideoCallbackEvent<I> for ProgressBarEvent
+impl<I> CallbackEvent<SharedVideoPlayer> for ProgressBarEvent<I>
 where
     I: VideoInternal + 'static,
 {
@@ -157,6 +168,9 @@ where
     }
 }
 
-impl ProgressBarEvent {}
+impl<I> ProgressBarEvent<I>
+where
+    I: VideoInternal + 'static,
+{}
 
 

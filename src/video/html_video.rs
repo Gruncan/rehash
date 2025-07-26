@@ -1,6 +1,7 @@
+use crate::event::CallbackController;
 use crate::get_element_as;
 use crate::prelude::*;
-use crate::video::video_callback_event::{CallbackController, MuteUnmuteEvent, PlayPauseEvent, ProgressBarEvent, VideoCallbackEvent, VideoCallbackEventInit};
+use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, MuteUnmuteEvent, PlayPauseEvent, ProgressBarEvent};
 use crate::video::video_internal::{VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
 use crate::{callback_event, console_log, debug_console_log, JsResult};
@@ -14,7 +15,7 @@ use web_sys::{Document, Element, HtmlSpanElement, HtmlVideoElement, KeyboardEven
 const SKIP_INCREMENT: f64 = 5.0;
 
 pub(crate) type HtmlVideoPlayer<S> = VideoPlayer<HtmlVideoPlayerInternal, S>;
-type Event = Rc<RefCell<dyn VideoCallbackEvent<HtmlVideoPlayerInternal>>>;
+type Event = Rc<RefCell<dyn CallbackEvent<SharedVideoPlayer>>>;
 
 pub(crate) struct HtmlVideoPlayerInternal {
     video_element: HtmlVideoElement,
@@ -226,9 +227,9 @@ impl HtmlVideoCallbackController {
     const MUTE_UNMUTE_ID: &'static str = "volume-btn";
 
     pub fn new(video_player: SharedVideoPlayer, ui_controller: HtmlVideoUIController) -> Self {
-        let play_pause_event: Event = callback_event!(PlayPauseEvent);
-        let mute_unmute_event: Event = callback_event!(MuteUnmuteEvent);
-        let progress_event: Event = callback_event!(ProgressBarEvent);
+        let play_pause_event: Event = callback_event!(PlayPauseEvent<HtmlVideoPlayerInternal>);
+        let mute_unmute_event: Event = callback_event!(MuteUnmuteEvent<HtmlVideoPlayerInternal>);
+        let progress_event: Event = callback_event!(ProgressBarEvent<HtmlVideoPlayerInternal>);
 
         let keyboard_events: HashMap<String, Event> = HashMap::from([
             ("p".to_string(), play_pause_event.clone()),
@@ -252,7 +253,7 @@ impl HtmlVideoCallbackController {
 }
 
 impl CallbackController for HtmlVideoCallbackController {
-    fn register_events(&self) {
+    fn register_events(&mut self) {
         let mut video_player_k = self.video_player.clone();
         let d = self.callback_keyboard_events.clone();
 
