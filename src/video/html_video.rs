@@ -1,7 +1,7 @@
 use crate::event::CallbackController;
 use crate::get_element_as;
 use crate::prelude::*;
-use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, FullScreenEvent, MuteUnmuteEvent, PlayPauseEvent, ProgressBarChangeEvent, ProgressBarClickEvent, ProgressBarClickEventCtx, ProgressBarClickEventCtxType, SettingsEvent};
+use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, FastForwardEvent, FullScreenEvent, MuteUnmuteEvent, PlayPauseEvent, ProgressBarChangeEvent, ProgressBarClickEvent, ProgressBarClickEventCtx, ProgressBarClickEventCtxType, RewindEvent, SettingsEvent};
 use crate::video::video_internal::{InternalVideoError, VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
 use crate::{callback_event, console_log, debug_console_log, JsResult};
@@ -68,13 +68,15 @@ impl VideoInternal for HtmlVideoPlayerInternal {
     }
 
     fn fast_forward(&self) -> VideoResultUnit {
-        let to_move = (self.video_element.current_time() + SKIP_INCREMENT).max(self.video_element.duration());
+        let to_move = (self.video_element.current_time() + SKIP_INCREMENT).min(self.video_element.duration());
+        console_log!("Fast forwarding to: {}", to_move);
         self.video_element.set_current_time(to_move);
         Ok(())
     }
 
     fn rewind(&self) -> VideoResultUnit {
-        let current_time = self.video_element.current_time() - SKIP_INCREMENT.min(0f64);
+        let current_time = (self.video_element.current_time() - SKIP_INCREMENT).max(0f64);
+        console_log!("Rewinding to: {}", current_time);
         self.video_element.set_current_time(current_time);
         Ok(())
     }
@@ -147,6 +149,8 @@ pub(crate) struct HtmlVideoUIController {
     progress_left: HtmlDivElement,
     settings_icon: SvgElement,
     fullscreen_icon: SvgElement,
+    fast_forward_icon: SvgElement,
+    rewind_icon: SvgElement,
 }
 
 
@@ -241,6 +245,9 @@ impl HtmlVideoUIController {
     const SETTINGS_ICON_ID: &'static str = "settings-icon";
     const FULLSCREEN_ICON_ID: &'static str = "fullscreen-icon";
 
+    const FAST_FORWARD_ICON_ID: &'static str = "fast-forward-icon";
+    const REWIND_ICON_ID: &'static str = "rewind-icon";
+
     const VIDEO_ID: &'static str = "video-player";
 
 
@@ -260,6 +267,9 @@ impl HtmlVideoUIController {
         let settings_icon = get_element_as!(&document, Self::SETTINGS_ICON_ID, SvgElement);
         let fullscreen_icon = get_element_as!(&document, Self::FULLSCREEN_ICON_ID, SvgElement);
 
+        let fast_forward_icon = get_element_as!(&document, Self::FAST_FORWARD_ICON_ID, SvgElement);
+        let rewind_icon = get_element_as!(&document, Self::REWIND_ICON_ID, SvgElement);
+
         let video_element = get_element_as!(&document, Self::VIDEO_ID, HtmlVideoElement);
 
 
@@ -276,6 +286,8 @@ impl HtmlVideoUIController {
             progress_left,
             settings_icon,
             fullscreen_icon,
+            fast_forward_icon,
+            rewind_icon,
         }
     }
 
@@ -299,6 +311,8 @@ impl HtmlVideoCallbackController {
     const SETTINGS_ID: &'static str = "settings";
     const FULLSCREEN_ID: &'static str = "fullscreen";
     const PROGRESS_BAR_ID: &'static str = "progress-bar";
+    const FAST_FORWARD_ID: &'static str = "fast-forward";
+    const REWIND_ID: &'static str = "rewind";
 
     pub fn new(video_player: SharedVideoPlayer, ui_controller: HtmlVideoUIController) -> Self {
         let play_pause_event: Event = callback_event!(PlayPauseEvent<HtmlVideoPlayerInternal>);
@@ -308,9 +322,14 @@ impl HtmlVideoCallbackController {
         let fullscreen_event: Event = callback_event!(FullScreenEvent);
         let progress_click_event: EventT<ProgressBarClickEventCtxType> = callback_event!(ProgressBarClickEvent);
 
+        let fast_forward_event: Event = callback_event!(FastForwardEvent);
+        let rewind_event: Event = callback_event!(RewindEvent);
+
         let keyboard_events: HashMap<String, Event> = HashMap::from([
             ("p".to_string(), play_pause_event.clone()),
             ("m".to_string(), mute_unmute_event.clone()),
+            ("ArrowRight".to_string(), fast_forward_event.clone()),
+            ("ArrowLeft".to_string(), rewind_event.clone()),
         ]);
 
         let control_events: HashMap<String, Event> = HashMap::from([
@@ -318,6 +337,8 @@ impl HtmlVideoCallbackController {
             (Self::MUTE_UNMUTE_ID.to_string(), mute_unmute_event.clone()),
             (Self::SETTINGS_ID.to_string(), settings_event.clone()),
             (Self::FULLSCREEN_ID.to_string(), fullscreen_event.clone()),
+            (Self::FAST_FORWARD_ID.to_string(), fast_forward_event.clone()),
+            (Self::REWIND_ID.to_string(), rewind_event.clone()),
         ]);
 
 

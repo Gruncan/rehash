@@ -170,7 +170,7 @@ impl CallbackEvent<SharedVideoPlayer> for SettingsEvent
     }
 }
 
-
+#[derive(Debug)]
 pub(crate) struct FullScreenEvent {}
 
 impl CallbackEventInit for FullScreenEvent {
@@ -179,17 +179,48 @@ impl CallbackEventInit for FullScreenEvent {
     }
 }
 
-impl Debug for FullScreenEvent {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
-    }
-}
-
-
 impl CallbackEvent<SharedVideoPlayer> for FullScreenEvent
 {
     fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
         debug_console_log!("Triggering fullscreen");
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct RewindEvent {}
+
+impl CallbackEventInit for RewindEvent {
+    fn new() -> Self {
+        Self {}
+    }
+}
+
+
+impl CallbackEvent<SharedVideoPlayer> for RewindEvent
+{
+    fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        let mutex = ctx.lock().unwrap();
+        mutex.rewind();
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct FastForwardEvent {}
+
+impl CallbackEventInit for FastForwardEvent {
+    fn new() -> Self {
+        Self {}
+    }
+}
+
+
+impl CallbackEvent<SharedVideoPlayer> for FastForwardEvent
+{
+    fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        let mutex = ctx.lock().unwrap();
+        mutex.fast_forward();
         Ok(())
     }
 }
