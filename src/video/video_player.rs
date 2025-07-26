@@ -44,6 +44,8 @@ pub trait VideoPlayerState {
     fn get_video_length(&self) -> f64;
 
     fn set_video_time(&self);
+
+    fn set_video_progress(&self, progress: f64);
 }
 
 impl<I, S> VideoPlayerState for VideoPlayer<I, S>
@@ -89,6 +91,10 @@ where
         let progress = self.get_progress();
         let duration = self.get_video_length();
         self.video_controller.update_progress(progress, duration)
+    }
+
+    fn set_video_progress(&self, progress: f64) {
+        self.internal.set_video_progress(progress);
     }
 }
 
@@ -224,4 +230,6 @@ pub trait VideoUIRegister {
     fn register_element_event_listener<T: ?Sized + WasmClosure>(&self, ids: Vec<String>, closure: Box<Closure<T>>);
 
     fn register_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>);
+
+    fn register_element_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, id: &str, closure: Box<Closure<T>>);
 }

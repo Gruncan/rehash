@@ -6,7 +6,7 @@ use crate::{debug_console_log, log_to_tauri};
 use std::any::TypeId;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
-
+use std::sync::{Arc, Mutex};
 
 pub(crate) struct PlayPauseEvent<I>
 where
@@ -190,6 +190,38 @@ impl CallbackEvent<SharedVideoPlayer> for FullScreenEvent
 {
     fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
         debug_console_log!("Triggering fullscreen");
+        Ok(())
+    }
+}
+
+
+pub(crate) type ProgressBarClickEventCtxType = Arc<Mutex<ProgressBarClickEventCtx>>;
+
+pub(crate) struct ProgressBarClickEventCtx {
+    pub(crate) video_player: SharedVideoPlayer,
+    pub(crate) time_to_seek: f64,
+}
+
+#[derive(Debug)]
+pub(crate) struct ProgressBarClickEvent {}
+
+impl CallbackEventInit for ProgressBarClickEvent {
+    fn new() -> Self {
+        Self {}
+    }
+}
+
+
+impl CallbackEvent<ProgressBarClickEventCtxType> for ProgressBarClickEvent {
+    fn trigger(&mut self, ctx: &mut ProgressBarClickEventCtxType) -> JsResult<()> {
+        debug_console_log!("Triggering progress bar click event");
+        let progress_mutex = ctx.lock().unwrap();
+        let percent = progress_mutex.time_to_seek;
+        debug_console_log!("Percent: {}%", percent);
+        let video_mutex = progress_mutex.video_player.lock().unwrap();
+        let new_video_time = video_mutex.get_video_length() * percent;
+        video_mutex.set_video_progress(new_video_time);
+
         Ok(())
     }
 }

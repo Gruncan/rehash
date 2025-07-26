@@ -1,7 +1,7 @@
 use crate::event::CallbackController;
 use crate::get_element_as;
 use crate::prelude::*;
-use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, FullScreenEvent, MuteUnmuteEvent, PlayPauseEvent, ProgressBarChangeEvent, SettingsEvent};
+use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, FullScreenEvent, MuteUnmuteEvent, PlayPauseEvent, ProgressBarChangeEvent, ProgressBarClickEvent, ProgressBarClickEventCtx, ProgressBarClickEventCtxType, SettingsEvent};
 use crate::video::video_internal::{InternalVideoError, VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
 use crate::{callback_event, console_log, debug_console_log, JsResult};
@@ -9,14 +9,16 @@ use std::cell::RefCell;
 use std::cmp::PartialOrd;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 use wasm_bindgen::closure::{Closure, WasmClosure};
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Document, Element, HtmlDivElement, HtmlSpanElement, HtmlVideoElement, KeyboardEvent, SvgElement};
+use web_sys::{Document, Element, HtmlDivElement, HtmlElement, HtmlSpanElement, HtmlVideoElement, KeyboardEvent, SvgElement};
 
 const SKIP_INCREMENT: f64 = 5.0;
 
 pub(crate) type HtmlVideoPlayer<S> = VideoPlayer<HtmlVideoPlayerInternal, S>;
 type Event = Rc<RefCell<dyn CallbackEvent<SharedVideoPlayer>>>;
+type EventT<T> = Rc<RefCell<dyn CallbackEvent<T>>>;
 
 pub(crate) struct HtmlVideoPlayerInternal {
     video_element: HtmlVideoElement,
@@ -110,6 +112,10 @@ impl VideoInternal for HtmlVideoPlayerInternal {
 
     fn get_video_length(&self) -> VideoResult<f64> {
         Ok(self.video_element.duration())
+    }
+
+    fn set_video_progress(&self, progress: f64) {
+        self.video_element.set_current_time(progress);
     }
 }
 
@@ -210,6 +216,13 @@ impl VideoUIRegister for HtmlVideoUIController {
             .expect("Failed to register global event listener");
         closure.forget();
     }
+
+    fn register_element_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, id: &str, closure: Box<Closure<T>>) {
+        self.document.get_element_by_id(id).expect("Failed to find element with id")
+            .add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
+            .expect("Failed to register element event listener");
+        closure.forget();
+    }
 }
 
 impl HtmlVideoUIController {
@@ -276,6 +289,7 @@ pub(crate) struct HtmlVideoCallbackController {
     callback_keyboard_events: HashMap<String, Event>,
     callback_control_events: HashMap<String, Event>,
     callback_progress_event: Event,
+    callback_progress_click_event: EventT<ProgressBarClickEventCtxType>,
 }
 
 
@@ -284,6 +298,7 @@ impl HtmlVideoCallbackController {
     const MUTE_UNMUTE_ID: &'static str = "volume-btn";
     const SETTINGS_ID: &'static str = "settings";
     const FULLSCREEN_ID: &'static str = "fullscreen";
+    const PROGRESS_BAR_ID: &'static str = "progress-bar";
 
     pub fn new(video_player: SharedVideoPlayer, ui_controller: HtmlVideoUIController) -> Self {
         let play_pause_event: Event = callback_event!(PlayPauseEvent<HtmlVideoPlayerInternal>);
@@ -291,6 +306,7 @@ impl HtmlVideoCallbackController {
         let progress_event: Event = callback_event!(ProgressBarChangeEvent);
         let settings_event: Event = callback_event!(SettingsEvent);
         let fullscreen_event: Event = callback_event!(FullScreenEvent);
+        let progress_click_event: EventT<ProgressBarClickEventCtxType> = callback_event!(ProgressBarClickEvent);
 
         let keyboard_events: HashMap<String, Event> = HashMap::from([
             ("p".to_string(), play_pause_event.clone()),
@@ -310,7 +326,8 @@ impl HtmlVideoCallbackController {
             ui_controller,
             callback_keyboard_events: keyboard_events,
             callback_control_events: control_events,
-            callback_progress_event: progress_event
+            callback_progress_event: progress_event,
+            callback_progress_click_event: progress_click_event
         }
     }
 }
@@ -359,6 +376,30 @@ impl CallbackController for HtmlVideoCallbackController {
         }));
 
         self.ui_controller.register_global_event_listener_specific("timeupdate", timeupdate_closure);
+
+        let video_player_p = self.video_player.clone();
+        let p = self.callback_progress_click_event.clone();
+        let progress_bar_click_closure: Box<Closure<dyn FnMut(web_sys::MouseEvent)>> = Box::new(Closure::new(move |event: web_sys::MouseEvent| {
+            let target = event.target().unwrap();
+            if let Some(element) = target.dyn_ref::<HtmlElement>() {
+                let rec = element.get_bounding_client_rect();
+                let click_x = event.client_x() as f64;
+                let percent = (click_x - rec.left()) / rec.width();
+
+                // think unneeded as trigger will take 'single ownership'
+                // todo fix second player clone
+                let mut ctx = Arc::new(Mutex::new(ProgressBarClickEventCtx { video_player: video_player_p.clone(), time_to_seek: percent }));
+                let mut callback = p.borrow_mut();
+                match callback.trigger(&mut ctx) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
+                    }
+                }
+            }
+        }));
+
+        self.ui_controller.register_element_event_listener_specific("click", Self::PROGRESS_BAR_ID, progress_bar_click_closure);
     }
 }
 

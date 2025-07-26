@@ -63,8 +63,7 @@ pub(crate) struct FileOpenEvent {}
 #[derive(Clone)]
 pub(crate) struct FileOpenEventCtx {
     video_element: HtmlVideoElement,
-    video_path: Option<String
-    >,
+    video_path: Option<String>,
 }
 
 
