@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::closure::{Closure, WasmClosure};
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Document, Element, HtmlSpanElement, HtmlVideoElement, KeyboardEvent, SvgElement};
+use web_sys::{Document, Element, HtmlDivElement, HtmlSpanElement, HtmlVideoElement, KeyboardEvent, SvgElement};
 
 const SKIP_INCREMENT: f64 = 5.0;
 
@@ -137,6 +137,8 @@ pub(crate) struct HtmlVideoUIController {
     muted_icon: SvgElement,
     current_time: HtmlSpanElement,
     total_time: HtmlSpanElement,
+    progress_fill: HtmlDivElement,
+    progress_left: HtmlDivElement,
 }
 
 
@@ -165,6 +167,14 @@ impl VideoUIController<HtmlVideoPlayerInternal> for HtmlVideoUIController {
     fn update_progress(&self, progress: f64, duration: f64) {
         self.current_time.set_text_content(Some(format_time(progress).as_str()));
         self.total_time.set_text_content(Some(format_time(duration).as_str()));
+
+        let percent = (progress / duration) * 100.0;
+
+        self.progress_fill.style().set_property("width", format!("{}%", percent).as_str())
+            .expect("Failed to set style for progress fill");
+        self.progress_left.style().set_property("left", format!("{}%", percent).as_str())
+            .expect("Failed to set style for progress left");
+
     }
 }
 
@@ -212,6 +222,9 @@ impl HtmlVideoUIController {
     const CURRENT_TIME_ID: &'static str = "current-time";
     const TOTAL_TIME_ID: &'static str = "total-time";
 
+    const PROGRESS_FILL: &'static str = "progress-fill";
+    const PROGRESS_LEFT: &'static str = "progress-handle";
+
     const VIDEO_ID: &'static str = "video-player";
 
 
@@ -225,7 +238,12 @@ impl HtmlVideoUIController {
         let current_time = get_element_as!(&document, Self::CURRENT_TIME_ID, HtmlSpanElement);
         let total_time = get_element_as!(&document, Self::TOTAL_TIME_ID, HtmlSpanElement);
 
+        let progress_fill = get_element_as!(&document, Self::PROGRESS_FILL, HtmlDivElement);
+        let progress_left = get_element_as!(&document, Self::PROGRESS_LEFT, HtmlDivElement);
+
+
         let video_element = get_element_as!(&document, Self::VIDEO_ID, HtmlVideoElement);
+
 
         Self {
             document,
@@ -235,7 +253,9 @@ impl HtmlVideoUIController {
             volume_icon,
             muted_icon,
             current_time,
-            total_time
+            total_time,
+            progress_fill,
+            progress_left,
         }
     }
 
@@ -323,7 +343,6 @@ impl CallbackController for HtmlVideoCallbackController {
 
         let timeupdate_closure: Box<Closure<dyn FnMut()>> = Box::new(Closure::new(move || {
             // TODO use this return
-            // console_log!("{}", "In closure for timeupdate");
             let _ = callback_handler(&mut video_player_t, Some(&t));
         }));
 

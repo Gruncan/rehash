@@ -4,14 +4,27 @@
     box-sizing: border-box;
 }
 
+html {
+    height: 100%;
+}
+
 body {
+    height: 100%;
     background: #000;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     padding: 20px;
 }
 
+video {
+    width: 100%;
+    max-width: 1280px;
+    height: auto;
+    display: block;
+}
+
 .video-container {
-    /*max-width: 900px;*/
+    height: 80%;
+    width: 80%;
     margin: 0 auto;
     background: #000;
     border-radius: 8px;
@@ -22,7 +35,7 @@ body {
 .video-wrapper {
     position: relative;
     width: 100%;
-    /*height: 500px;*/
+    height: 90%;
     background: #1a1a1a;
     display: flex;
     align-items: center;
@@ -126,14 +139,14 @@ body {
     height: 100%;
     background: #ff4757;
     border-radius: 3px;
-    width: 30%;
+    width: 0;
     transition: width 0.1s ease;
 }
 
 .progress-handle {
     position: absolute;
     top: 50%;
-    left: 30%;
+    left: 0;
     width: 14px;
     height: 14px;
     background: #ff4757;
