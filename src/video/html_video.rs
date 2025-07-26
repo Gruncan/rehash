@@ -286,7 +286,7 @@ impl CallbackController for HtmlVideoCallbackController {
 
         let timeupdate_closure: Box<Closure<dyn FnMut()>> = Box::new(Closure::new(move || {
             // TODO use this return
-            console_log!("{}", "In closure for timeupdate");
+            // console_log!("{}", "In closure for timeupdate");
             let _ = callback_handler(&mut video_player_t, Some(&t));
         }));
 

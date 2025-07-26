@@ -1,3 +1,4 @@
+use std::fs;
 use tauri::menu::{AboutMetadata, Menu, MenuBuilder, MenuItem, MenuItemBuilder, Submenu, SubmenuBuilder};
 use tauri::Window;
 use tauri::{Emitter, Manager};
@@ -6,6 +7,22 @@ use tauri_plugin_dialog::{DialogExt, FileDialogBuilder, FilePath};
 #[tauri::command]
 fn wasm_log(message: String) {
     println!("[WASM] {}", message);
+}
+
+#[tauri::command]
+async fn get_video_bytes(path: String) -> Result<Vec<u8>, String> {
+    println!("Reading video file: {}", path);
+
+    match fs::read(&path) {
+        Ok(data) => {
+            println!("Successfully read {} bytes", data.len());
+            Ok(data)
+        }
+        Err(e) => {
+            println!("Error reading file: {}", e);
+            Err(e.to_string())
+        }
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -58,7 +75,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![wasm_log])
+        .invoke_handler(tauri::generate_handler![wasm_log, get_video_bytes])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
