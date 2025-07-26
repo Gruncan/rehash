@@ -1,6 +1,6 @@
 [package]
 name = "rehash-desktop"
-version = "0.1.2"
+version = "0.1.3"
 description = "Rehash desktop"
 authors = ["Gruncan"]
 license = ""
