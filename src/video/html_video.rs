@@ -47,7 +47,6 @@ impl From<u16> for InternalVideoReadiness {
 
 
 
-
 #[macro_export]
 macro_rules! get_element_as {
     ($document:expr, $id:expr, $t:ty) => {
@@ -290,6 +289,12 @@ impl CallbackController for HtmlVideoCallbackController {
 
         let keyboard_closure: Box<Closure<dyn FnMut(KeyboardEvent)>> = Box::new(Closure::new(move |event: KeyboardEvent| {
             let key = event.key();
+            #[cfg(not(debug_assertions))]
+            {
+                if !d.contains_key(&key) {
+                    event.prevent_default();
+                }
+            }
             // TODO use this return
             let _ = callback_handler(&mut video_player_k, d.get(&key));
         }));
