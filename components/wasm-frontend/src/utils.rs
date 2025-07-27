@@ -1,28 +1,7 @@
-use js_sys::Promise;
+use crate::prelude::*;
 use std::panic;
-use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 
-#[wasm_bindgen]
-extern "C" {
-    pub(crate) fn alert(s: &str);
-
-    #[wasm_bindgen(js_namespace = console)]
-    pub(crate) fn log(s: &str);
-
-    #[wasm_bindgen(js_namespace = console)]
-    pub(crate) fn error(s: &str);
-
-    #[wasm_bindgen(js_namespace=["__TAURI_INTERNALS__"], js_name = invoke)]
-    pub(crate) fn tauri_invoke(cmd: &str, args: JsValue) -> Promise;
-
-    #[wasm_bindgen(js_namespace=["__TAURI__", "event"], js_name=listen)]
-    pub(crate) fn tauri_listen(event_name: &str, callback: &js_sys::Function);
-
-    #[wasm_bindgen(js_namespace=["__TAURI__", "core"], js_name=convertFileSrc)]
-    pub(crate) fn tauri_convert_file_src(src: &str, protocol: Option<&str>) -> JsValue;
-
-}
 
 pub fn log_to_tauri(msg: &str) {
     let args = js_sys::Object::new();
