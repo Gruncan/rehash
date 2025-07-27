@@ -68,22 +68,22 @@ jobs:
         working-directory: ./components/wasm-bindings-lib
         run: cargo build
 
-  build_rehash_desktop_linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt install pkg-config libssl-dev libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
-
-      - name: Run Script
-        working-directory: ./rehash-desktop
-        run: cargo build
+#  build_rehash_desktop_linux:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v3
+#
+#      - name: Install Rust toolchain
+#        uses: actions-rs/toolchain@v1
+#        with:
+#          profile: minimal
+#          toolchain: stable
+#          override: true
+#
+#      - name: Install system dependencies
+#        run: sudo apt-get update && sudo apt install pkg-config libssl-dev libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+#
+#      - name: Run Script
+#        working-directory: ./rehash-desktop
+#        run: cargo build
 
