@@ -1,7 +1,6 @@
 use js_sys::Promise;
 use std::panic;
 use wasm_bindgen::prelude::wasm_bindgen;
-use wasm_bindgen::JsValue;
 
 
 #[wasm_bindgen]
@@ -51,6 +50,7 @@ pub fn log_to_tauri(msg: &str) {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(&args, &"message".into(), &msg.into()).unwrap();
     // TODO use the return value
+    #[cfg(feature = "tauri")]
     let _ = tauri_invoke("wasm_log", JsValue::from(args));
 }
 
