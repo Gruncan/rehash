@@ -20,7 +20,7 @@ jobs:
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
 
-      - name: Run Script
+      - name: Run Cargo build
         working-directory: ./components/wasm-bindings-lib
         run: cargo build
 
@@ -120,10 +120,13 @@ jobs:
         with:
           name: wasm_frontend
 
+      - name: Create dir
+        run: mkdir rehash-desktop/pkg/
+
       - name: Move artifacts
         run: mv *.d.ts *.wasm *.js rehash-desktop/pkg/
 
-      - name: Run Script
+      - name: Run Cargo build
         working-directory: ./rehash-desktop
         run: cargo build
 
