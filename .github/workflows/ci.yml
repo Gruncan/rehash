@@ -1,0 +1,132 @@
+name: ci.yml
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_rehash_wasm_binding_lib:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
+
+      - name: Run Cargo build
+        working-directory: ./components/wasm-bindings-lib
+        run: cargo build
+
+  build_rehash_front_end:
+    needs: build_rehash_wasm_binding_lib
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
+      - name: Run Script
+        working-directory: ./components/wasm-frontend
+        run: ./build-frontend.sh
+
+      - name: Upload WASM frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm_frontend
+          path: |
+            rehash-desktop/pkg/*.d.ts
+            rehash-desktop/pkg/*.wasm
+            rehash-desktop/pkg/*.wasm.d.ts
+            rehash-desktop/pkg/*.js
+
+  build_rehash_loader:
+    needs: build_rehash_wasm_binding_lib
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
+      - name: Run Script
+        working-directory: ./components/wasm-loader
+        run: ./build-loader.sh
+
+      - name: Upload WASM Loader artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm_loader
+          path: |
+            static/*.d.ts
+            static/*.wasm.d.ts
+            static/*.wasm
+            static/*.js
+  
+
+  build_rehash_desktop_linux:
+    runs-on: ubuntu-latest
+    needs: [ build_rehash_loader, build_rehash_front_end ]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt install pkg-config libssl-dev libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Download wasm_loader artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm_loader
+
+      - name: Move artifacts
+        run: mv *.d.ts *.wasm *.js static/
+
+      - name: Download wasm_frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm_frontend
+
+      - name: Create dir
+        run: mkdir rehash-desktop/pkg/
+
+      - name: Move artifacts
+        run: mv *.d.ts *.wasm *.js rehash-desktop/pkg/
+
+      - name: Run Cargo build
+        working-directory: ./rehash-desktop
+        run: cargo build
+

@@ -46,7 +46,7 @@ extern "C" {
     
 }
 
-
+#[cfg(feature = "tauri")]
 pub fn log_to_tauri(msg: &str) {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(&args, &"message".into(), &msg.into()).unwrap();
