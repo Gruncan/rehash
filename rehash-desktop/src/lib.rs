@@ -1,5 +1,8 @@
 use std::fs;
-use tauri::menu::{AboutMetadata, Menu, MenuBuilder, MenuItem, MenuItemBuilder, Submenu, SubmenuBuilder};
+use tauri::menu::{
+    AboutMetadata, Menu, MenuBuilder, MenuItem, MenuItemBuilder, Submenu, SubmenuBuilder,
+};
+use tauri::path::BaseDirectory;
 use tauri::Window;
 use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::{DialogExt, FileDialogBuilder, FilePath};
@@ -34,7 +37,9 @@ async fn get_video_bytes(path: String) -> Result<Vec<u8>, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    println!("Desktop version: {}", DESKTOP_VERSION);
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -45,29 +50,24 @@ pub fn run() {
                 )?;
             }
 
-            let open = MenuItemBuilder::new("Open")
-                .id("open")
-                .build(app)?;
+            let open = MenuItemBuilder::new("Open").id("open").build(app)?;
 
-            let app_submenu = SubmenuBuilder::new(app, "File")
-                .item(&open)
-                .build()?;
+            let app_submenu = SubmenuBuilder::new(app, "File").item(&open).build()?;
 
-            let menu = MenuBuilder::new(app)
-                .items(&[
-                    &app_submenu,
-                ])
-                .build()?;
+            let menu = MenuBuilder::new(app).items(&[&app_submenu]).build()?;
             app.set_menu(menu)?;
 
             app.on_menu_event(move |app, event| {
                 if event.id() == open.id() {
                     let cloned = app.clone();
-                    app.dialog().file()
+                    app.dialog()
+                        .file()
                         .add_filter("Video", &["mp4"])
                         .pick_file(move |path_buf| match path_buf {
                             Some(p) => {
-                                cloned.emit("select-video-event", p.to_string()).expect("Failed to send file path to front end");
+                                cloned
+                                    .emit("select-video-event", p.to_string())
+                                    .expect("Failed to send file path to front end");
                             }
                             None => {}
                         });

@@ -3,26 +3,49 @@ use std::panic;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 
+
 #[wasm_bindgen]
 extern "C" {
-    pub(crate) fn alert(s: &str);
+    pub fn alert(s: &str);
 
     #[wasm_bindgen(js_namespace = console)]
-    pub(crate) fn log(s: &str);
+    pub fn log(s: &str);
 
     #[wasm_bindgen(js_namespace = console)]
-    pub(crate) fn error(s: &str);
+    pub fn error(s: &str);
 
+    #[wasm_bindgen(js_name = import)]
+    pub fn dynamic_import(module: &str) -> Promise;
+
+    #[wasm_bindgen(js_name = import)]
+    pub fn fetch(url: &str) -> Promise;
+
+    #[cfg(feature = "tauri")]
     #[wasm_bindgen(js_namespace=["__TAURI_INTERNALS__"], js_name = invoke)]
-    pub(crate) fn tauri_invoke(cmd: &str, args: JsValue) -> Promise;
+    pub fn tauri_invoke(cmd: &str, args: JsValue) -> Promise;
 
+    #[cfg(feature = "tauri")]
     #[wasm_bindgen(js_namespace=["__TAURI__", "event"], js_name=listen)]
-    pub(crate) fn tauri_listen(event_name: &str, callback: &js_sys::Function);
+    pub fn tauri_listen(event_name: &str, callback: &js_sys::Function);
 
+    #[cfg(feature = "tauri")]
     #[wasm_bindgen(js_namespace=["__TAURI__", "core"], js_name=convertFileSrc)]
-    pub(crate) fn tauri_convert_file_src(src: &str, protocol: Option<&str>) -> JsValue;
+    pub fn tauri_convert_file_src(src: &str, protocol: Option<&str>) -> JsValue;
 
+    #[cfg(feature = "tauri")]
+    #[wasm_bindgen(js_namespace=["__TAURI__", "path"], js_name=resolveResource)]
+    pub fn tauri_resolve_resource(src: &str) -> Promise;
+
+    #[cfg(feature = "tauri")]
+    #[wasm_bindgen(js_namespace=["__TAURI__", "fs"], js_name=readTextFile)]
+    pub fn tauri_read_text_file(src: &str) -> Promise;
+
+    #[cfg(feature = "tauri")]
+    #[wasm_bindgen(js_namespace=["__TAURI__", "fs"], js_name=readFile)]
+    pub fn tauri_read_binary_file(src: &str, options: &JsValue) -> Promise;
+    
 }
+
 
 pub fn log_to_tauri(msg: &str) {
     let args = js_sys::Object::new();
@@ -57,4 +80,5 @@ pub fn set_panic_hook() {
         error_log!("Rust panic: {}", info);
     }))
 }
+
 

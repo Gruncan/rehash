@@ -7,8 +7,9 @@
     <link href="style.css" rel="stylesheet">
 </head>
 <body>
-<h4 id="build-wasm" style="color: white">Build WASM: </h4>
-<h4 id="build-desktop" style="color: white">Build Desktop: </h4>
+<h4 id="build-wasm" style="color: white">Build WASM: 0.0.0</h4>
+<h4 id="build-desktop" style="color: white">Build Desktop: 0.0.0</h4>
+<h4 id="build-loader" style="color: white">Build Loader: 0.0.0</h4>
 <div class="video-container">
     <div class="video-wrapper">
         <video id="video-player"></video>
@@ -96,7 +97,7 @@
     </div>
 </div>
 <script type="module">
-    import init from "./pkg/rehash.js"
+    import init from "./rehash_wasm_loader.js"
 
     init().catch(console.error);
 </script>
