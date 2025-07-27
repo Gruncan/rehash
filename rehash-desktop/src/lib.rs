@@ -2,6 +2,7 @@ use std::fs;
 use tauri::menu::{
     AboutMetadata, Menu, MenuBuilder, MenuItem, MenuItemBuilder, Submenu, SubmenuBuilder,
 };
+use tauri::path::BaseDirectory;
 use tauri::Window;
 use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::{DialogExt, FileDialogBuilder, FilePath};
@@ -47,6 +48,8 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            let resource_path = app.path().resolve("pkg/rehash_wasm_frontend.js", BaseDirectory::Resource)?;
+            println!("Resource path: {:?}", resource_path);
 
             let open = MenuItemBuilder::new("Open").id("open").build(app)?;
 

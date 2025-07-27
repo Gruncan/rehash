@@ -1,5 +1,4 @@
 
-mod utils;
 mod prelude;
 mod video;
 mod event;

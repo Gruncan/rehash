@@ -1,1 +1,1 @@
-wasm-pack build --target web --out-dir ../../rehash-desktop/pkg --dev
+wasm-pack build --target web --out-dir ../../static --dev

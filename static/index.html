@@ -96,10 +96,49 @@
     </div>
 </div>
 <script type="module">
-    import init from "./rehash_wasm_frontend.js"
+    async function loadWasmModule(jsFile, wasmFile) {
+        // const wasmUrl = new URL(wasmFile, import.meta.url).href;
+        // console.log('Loading WASM from:', wasmUrl);
+        //
+        // const wasmResponse = await fetch(wasmUrl);
+        // if (!wasmResponse.ok) {
+        //     throw new Error(`Failed to fetch WASM file: ${wasmResponse.status}`);
+        // }
+        //
+        // const wasmBytes = await wasmResponse.arrayBuffer();
+        // const wasmModule = await WebAssembly.instantiate(wasmBytes);
+        //
+        //
 
-    init().catch(console.error);
+        const path = await window.__TAURI__.path.resolveResource(jsFile);
+        console.log('Loading JS from:', path);
+        const content = await window.__TAURI__.fs.readTextFile(path);
+        const blob = new Blob([content], {type: 'application/javascript'});
+        const blobUrl = URL.createObjectURL(blob);
 
+        // console.log('Loading WASM from:', wasm_path);
+        const wasmBlob = await window.__TAURI__.fs.readFile(wasmFile, {baseDir: __TAURI__.fs.BaseDirectory.Resource});
+        console.log(wasmBlob);
+
+        const module = await import(blobUrl);
+        const init = module.default
+
+        init(wasmBlob).catch(console.error)
+
+    }
+
+    // Usage example:
+    (async () => {
+        const module = await loadWasmModule("pkg/rehash_wasm_frontend.js", "pkg/rehash_wasm_frontend_bg.wasm");
+
+        console.log("✅ WASM loaded:", module);
+    })();
+
+    // import init from "./rehash_wasm_loader.js"
+    //
+    // init().catch(console.error);
+    // WebAssembly.
+    // import(btoa()
 </script>
 </body>
 </html>
