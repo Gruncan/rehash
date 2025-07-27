@@ -2,7 +2,7 @@ use crate::event::CallbackController;
 use crate::get_element_as;
 use crate::prelude::*;
 use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, FastForwardEvent, FullScreenEvent, MuteUnmuteEvent, PlayPauseEvent, ProgressBarChangeEvent, ProgressBarClickEvent, ProgressBarClickEventCtx, ProgressBarClickEventCtxType, RewindEvent, SettingsEvent};
-use crate::video::video_internal::{InternalVideoError, VideoInternal, VideoResult, VideoResultUnit};
+use crate::video::video_internal::{VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
 use crate::{callback_event, console_log, debug_console_log, JsResult};
 use std::cell::RefCell;
@@ -89,14 +89,9 @@ impl VideoInternal for HtmlVideoPlayerInternal {
     }
 
     fn play(&self) -> VideoResult<::js_sys::Promise> {
-        let state: InternalVideoReadiness = self.video_element.ready_state().into();
-        if state >= InternalVideoReadiness::CurrentData {
-            match self.video_element.play() {
-                Ok(p) => Ok(p),
-                Err(err) => Err(err.as_string().unwrap().into()),
-            }
-        } else {
-            Err(InternalVideoError("Video not ready".to_string()))
+        match self.video_element.play() {
+            Ok(p) => Ok(p),
+            Err(err) => Err(err.as_string().unwrap().into()),
         }
     }
 
@@ -118,6 +113,11 @@ impl VideoInternal for HtmlVideoPlayerInternal {
 
     fn set_video_progress(&self, progress: f64) {
         self.video_element.set_current_time(progress);
+    }
+
+    fn ready(&self) -> bool {
+        let state: InternalVideoReadiness = self.video_element.ready_state().into();
+        state >= InternalVideoReadiness::CurrentData
     }
 }
 

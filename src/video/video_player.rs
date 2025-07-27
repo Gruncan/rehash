@@ -145,9 +145,9 @@ where
 
 impl<I> VideoPlayer<I, Uninitialized>
 where
-    I: VideoInternal,
+    I: VideoInternal + 'static,
 {
-    pub fn new(internal: I, video_controller: Rc<dyn VideoUIController<I>>) -> VideoPlayer<I, Paused> {
+    pub fn new(internal: I, video_controller: Rc<dyn VideoUIController<I>>) -> VideoPlayer<I, Uninitialized> {
         debug_console_log!("VideoPlayer initializing");
         VideoPlayer {
             internal,
@@ -156,12 +156,22 @@ where
             video_controller,
         }
     }
+
+
+    pub(crate) fn ready(self) -> VideoPlayerResult<I, Ready> {
+        if self.internal.ready() {
+            Ok(self.transition())
+        } else {
+            Err(self.transition())
+        }
+    }
 }
 
 
-impl<I> VideoPlayer<I, Paused>
+impl<I, T> VideoPlayer<I, T>
 where
     I: VideoInternal + 'static,
+    T: Playable + 'static,
 {
     pub(crate) fn play(self) -> VideoPlayerResult<I, Playing> {
         // should probably return a 'future' type state e.g. WaitingToPlay
@@ -185,25 +195,59 @@ where
         Ok(self.transition())
     }
 
+    pub(crate) fn finish(self) -> VideoPlayerResult<I, Finished> {
+        Ok(self.transition())
+    }
+
 }
+
+
+impl<I> VideoPlayer<I, Finished>
+where
+    I: VideoInternal + 'static,
+{
+    pub(crate) fn restart(self) -> VideoPlayerResult<I, Ready> {
+        self.internal.set_video_progress(0f64);
+        Ok(self.transition())
+    }
+}
+
 
 pub trait VideoPlayerTypeState {
     type FallbackState;
 }
 
 pub enum Uninitialized {}
+pub enum Ready {}
 pub enum Paused {}
 pub enum Playing {}
+pub enum Finished {}
+
+
+pub(crate) trait Playable: VideoPlayerTypeState {}
+
+impl Playable for Ready {}
+
+impl Playable for Paused {}
 
 impl VideoPlayerTypeState for Uninitialized {
     type FallbackState = Uninitialized;
 }
+
+impl VideoPlayerTypeState for Ready {
+    type FallbackState = Uninitialized;
+}
+
 
 impl VideoPlayerTypeState for Paused {
     type FallbackState = Playing;
 }
 
 impl VideoPlayerTypeState for Playing {
+    type FallbackState = Paused;
+}
+
+impl VideoPlayerTypeState for Finished {
     type FallbackState = Paused;
 }
 

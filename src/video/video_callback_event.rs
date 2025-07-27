@@ -1,12 +1,13 @@
 pub(crate) use crate::event::{CallbackEvent, CallbackEventInit};
 use crate::video::video_internal::VideoInternal;
-use crate::video::video_player::{get_state_owned, Paused, Playing, SharedVideoPlayer, VideoPlayer, VideoPlayerState};
+use crate::video::video_player::{get_state_owned, Finished, Paused, Playing, Ready, SharedVideoPlayer, Uninitialized, VideoPlayer, VideoPlayerResult, VideoPlayerState, VideoPlayerTypeState};
 use crate::JsResult;
 use crate::{debug_console_log, log_to_tauri};
 use std::any::TypeId;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
+use wasm_bindgen::JsValue;
 
 pub(crate) struct PlayPauseEvent<I>
 where
@@ -23,7 +24,7 @@ where
     fn new() -> Self {
         Self {
             marker: std::marker::PhantomData,
-            type_id: TypeId::of::<Paused>(),
+            type_id: TypeId::of::<Uninitialized>(),
         }
     }
 }
@@ -45,30 +46,39 @@ where
         let mutex = ctx.lock().unwrap();
         let mut cell = mutex;
 
-        let standard: Box<dyn VideoPlayerState>;
-        if self.is_paused() {
-            let video_paused: VideoPlayer<I, Paused> = get_state_owned(cell.deref())?;
-            match video_paused.play() {
-                Ok(video) => {
-                    self.type_id = TypeId::of::<Playing>();
-                    standard = Box::new(video);
-                },
-                Err(video) => {
-                    standard = Box::new(video);
-                }
-            }
-        } else {
-            let video_playing: VideoPlayer<I, Playing> = get_state_owned(cell.deref())?;
-            match video_playing.pause() {
-                Ok(video) => {
-                    self.type_id = TypeId::of::<Paused>();
-                    standard = Box::new(video);
-                },
-                Err(video) => {
-                    standard = Box::new(video);
-                }
+        if self.type_id == TypeId::of::<Uninitialized>() {
+            let video_uninitialised: VideoPlayer<I, Uninitialized> = get_state_owned(cell.deref())?;
+            *cell = self.get_video_player_state_return(video_uninitialised.ready());
+            if self.type_id == TypeId::of::<Uninitialized>() {
+                return Ok(());
             }
         }
+
+        let standard: Box<dyn VideoPlayerState>;
+
+
+        match self.type_id {
+            id if id == TypeId::of::<Ready>() => {
+                let video_uninitialised: VideoPlayer<I, Ready> = get_state_owned(cell.deref())?;
+                standard = self.get_video_player_state_return(video_uninitialised.play())
+            },
+            id if id == TypeId::of::<Playing>() => {
+                let video_playing: VideoPlayer<I, Playing> = get_state_owned(cell.deref())?;
+                standard = self.get_video_player_state_return(video_playing.pause());
+            },
+            id if id == TypeId::of::<Paused>() => {
+                let video_paused: VideoPlayer<I, Paused> = get_state_owned(cell.deref())?;
+                standard = self.get_video_player_state_return(video_paused.play());
+            },
+            id if id == TypeId::of::<Finished>() => {
+                let video_finished: VideoPlayer<I, Finished> = get_state_owned(cell.deref())?;
+                standard = self.get_video_player_state_return(video_finished.restart());
+            },
+            _ => {
+                return Err(JsValue::from_str("Callback play event has incorrect type"))
+            }
+        }
+
         *cell = standard;
 
         Ok(())
@@ -79,9 +89,23 @@ impl<I> PlayPauseEvent<I>
 where
     I: VideoInternal + 'static,
 {
-    pub fn is_paused(&self) -> bool {
-        self.type_id == TypeId::of::<Paused>()
+    fn get_video_player_state_return<S>(&mut self, video_result: VideoPlayerResult<I, S>) -> Box<dyn VideoPlayerState>
+    where
+        S: VideoPlayerTypeState + 'static,
+        <S as VideoPlayerTypeState>::FallbackState: VideoPlayerTypeState,
+    {
+        match video_result {
+            Ok(v) => {
+                self.type_id = TypeId::of::<S>();
+                Box::new(v) as Box<dyn VideoPlayerState>
+            },
+            Err(v) => {
+                self.type_id = TypeId::of::<S::FallbackState>();
+                Box::new(v) as Box<dyn VideoPlayerState>
+            }
+        }
     }
+
 }
 
 
