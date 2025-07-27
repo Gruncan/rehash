@@ -113,7 +113,7 @@ jobs:
           name: wasm_loader
 
       - name: Move artifacts
-        run: mv *.d.ts *.wasm.d.ts *.wasm *.js static/
+        run: mv *.wasm.d.ts *.d.ts *.wasm *.js static/
 
       - name: Download wasm_frontend artifact
         uses: actions/download-artifact@v4
@@ -121,7 +121,7 @@ jobs:
           name: wasm_frontend
 
       - name: Move artifacts
-        run: mv *.d.ts *.wasm.d.ts *.wasm *.js rehash-desktop/pkg/
+        run: mv *.wasm.d.ts *.d.ts *.wasm *.js rehash-desktop/pkg/
 
       - name: Run Script
         working-directory: ./rehash-desktop
