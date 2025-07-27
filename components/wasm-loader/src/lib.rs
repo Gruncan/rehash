@@ -1,65 +1,71 @@
-use js_sys::{ArrayBuffer, Function, Promise, Reflect};
+use js_sys::{Array, Function, Object, Reflect};
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use wasm_bindings_lib::*;
-use web_sys::Response;
-
-fn base64_encode(input: &[u8]) -> String {
-    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut result = String::new();
-
-    for chunk in input.chunks(3) {
-        let mut buf = [0u8; 3];
-        for (i, &byte) in chunk.iter().enumerate() {
-            buf[i] = byte;
-        }
-
-        let b = ((buf[0] as u32) << 16) | ((buf[1] as u32) << 8) | (buf[2] as u32);
-
-        result.push(CHARS[((b >> 18) & 63) as usize] as char);
-        result.push(CHARS[((b >> 12) & 63) as usize] as char);
-        result.push(if chunk.len() > 1 { CHARS[((b >> 6) & 63) as usize] as char } else { '=' });
-        result.push(if chunk.len() > 2 { CHARS[(b & 63) as usize] as char } else { '=' });
-    }
-
-    result
-}
-
-async fn load_wasm(name: &str) -> Result<JsValue, JsValue> {
-    let js_url = format!("assets://pkg/{}.js", name);
-    let wasm_url = format!("assets://pkg/{}_bg.wasm", name);
-
-    let js_module = match JsFuture::from(dynamic_import(js_url.as_str())).await {
-        Ok(module) => module,
-        Err(e) => return Err(JsValue::from_str("Failed to dynamically import js file"))
-    };
+use web_sys::{Blob, BlobPropertyBag, HtmlElement, Url};
 
 
-    let response = JsFuture::from(fetch(wasm_url.as_str())).await?;
-    let response: Response = response.dyn_into()?;
-    console_log!("Got WASM module");
+pub const WASM_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-    let array_buffer = JsFuture::from(response.array_buffer()?).await?;
-    let array_buffer: ArrayBuffer = array_buffer.dyn_into()?;
-    console_log!("Got WASM array buffer");
 
-    let init_func = Reflect::get(&js_module, &"default".into())?;
-    let init_func: Function = init_func.dyn_into()?;
-    console_log!("Got WASM init function");
+async fn load_wasm(name: &str) -> Result<(), JsValue> {
+    let js_path = format!("pkg/{}.js", name);
+    let wasm_path = format!("pkg/{}_bg.wasm", name);
 
-    let promise: Promise = init_func.call1(&JsValue::NULL, &array_buffer)?.dyn_into()?;
-    console_log!("Called WASM init function");
+    let js_path = JsFuture::from(tauri_resolve_resource(js_path.as_str())).await?;
+    debug_console_log!("Loading frontend JS from: {}", js_path.as_string().unwrap_or("NULL".to_string()));
 
-    JsFuture::from(promise).await?;
+    let content = JsFuture::from(tauri_read_text_file(js_path.as_string().unwrap().as_str())).await?;
+    let blob_options = BlobPropertyBag::new();
+    blob_options.set_type("application/javascript");
 
-    Ok(js_module)
+    let array = Array::new();
+    array.push(&content);
+
+    let blob = Blob::new_with_u8_array_sequence_and_options(&array, &blob_options)?;
+
+    let blob_url = Url::create_object_url_with_blob(&blob)?;
+
+    debug_console_log!("Blob url {}", blob_url);
+    let options = Object::new();
+    let base_dir = JsValue::from(11u16);
+    Reflect::set(&options, &JsValue::from("baseDir"), &base_dir)?;
+
+    let wasm_blob = JsFuture::from(tauri_read_binary_file(wasm_path.as_str(), &options)).await?;
+    debug_console_log!("Wasm blob: {:?}", wasm_blob);
+
+    let module = JsFuture::from(dynamic_import(blob_url.as_str())).await?;
+
+    let init_fn = Reflect::get(&module, &"default".into())?;
+    let init_fn = init_fn.dyn_into::<Function>()?;
+
+    // TODO fix this to that is does not warn about deprecated
+    // using deprecated parameters for the initialization function; pass a single object instead
+    // let obj = Object::new();
+    // Reflect::set(&obj, &JsValue::from_str("bytes"), &wasm_blob)?;
+
+    let _ = init_fn.call1(&JsValue::NULL, &wasm_blob)?;
+
+    Ok(())
 }
 
 
 #[wasm_bindgen(start)]
 pub fn main() {
     set_panic_hook();
+
+    #[cfg(debug_assertions)]
+    {
+        let window = web_sys::window().ok_or("Failed to get window").unwrap();
+        let document = window.document().ok_or("Failed to get document").unwrap();
+
+        let version_header = document.get_element_by_id("build-loader")
+            .unwrap()
+            .dyn_into::<HtmlElement>().unwrap();
+
+        version_header.set_text_content(Some(&format!("Build Loader: {}", WASM_VERSION)));
+    }
 
     wasm_bindgen_futures::spawn_local(async move {
         match load_wasm("rehash_wasm_frontend").await {

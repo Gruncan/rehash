@@ -39,6 +39,11 @@ extern "C" {
     #[cfg(feature = "tauri")]
     #[wasm_bindgen(js_namespace=["__TAURI__", "fs"], js_name=readTextFile)]
     pub fn tauri_read_text_file(src: &str) -> Promise;
+
+    #[cfg(feature = "tauri")]
+    #[wasm_bindgen(js_namespace=["__TAURI__", "fs"], js_name=readFile)]
+    pub fn tauri_read_binary_file(src: &str, options: &JsValue) -> Promise;
+    
 }
 
 

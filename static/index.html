@@ -7,8 +7,9 @@
     <link href="style.css" rel="stylesheet">
 </head>
 <body>
-<h4 id="build-wasm" style="color: white">Build WASM: </h4>
-<h4 id="build-desktop" style="color: white">Build Desktop: </h4>
+<h4 id="build-wasm" style="color: white">Build WASM: 0.0.0</h4>
+<h4 id="build-desktop" style="color: white">Build Desktop: 0.0.0</h4>
+<h4 id="build-loader" style="color: white">Build Loader: 0.0.0</h4>
 <div class="video-container">
     <div class="video-wrapper">
         <video id="video-player"></video>
@@ -96,49 +97,9 @@
     </div>
 </div>
 <script type="module">
-    async function loadWasmModule(jsFile, wasmFile) {
-        // const wasmUrl = new URL(wasmFile, import.meta.url).href;
-        // console.log('Loading WASM from:', wasmUrl);
-        //
-        // const wasmResponse = await fetch(wasmUrl);
-        // if (!wasmResponse.ok) {
-        //     throw new Error(`Failed to fetch WASM file: ${wasmResponse.status}`);
-        // }
-        //
-        // const wasmBytes = await wasmResponse.arrayBuffer();
-        // const wasmModule = await WebAssembly.instantiate(wasmBytes);
-        //
-        //
+    import init from "./rehash_wasm_loader.js"
 
-        const path = await window.__TAURI__.path.resolveResource(jsFile);
-        console.log('Loading JS from:', path);
-        const content = await window.__TAURI__.fs.readTextFile(path);
-        const blob = new Blob([content], {type: 'application/javascript'});
-        const blobUrl = URL.createObjectURL(blob);
-
-        // console.log('Loading WASM from:', wasm_path);
-        const wasmBlob = await window.__TAURI__.fs.readFile(wasmFile, {baseDir: __TAURI__.fs.BaseDirectory.Resource});
-        console.log(wasmBlob);
-
-        const module = await import(blobUrl);
-        const init = module.default
-
-        init(wasmBlob).catch(console.error)
-
-    }
-
-    // Usage example:
-    (async () => {
-        const module = await loadWasmModule("pkg/rehash_wasm_frontend.js", "pkg/rehash_wasm_frontend_bg.wasm");
-
-        console.log("✅ WASM loaded:", module);
-    })();
-
-    // import init from "./rehash_wasm_loader.js"
-    //
-    // init().catch(console.error);
-    // WebAssembly.
-    // import(btoa()
+    init().catch(console.error);
 </script>
 </body>
 </html>

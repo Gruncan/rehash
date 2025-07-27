@@ -1,6 +1,6 @@
 [package]
 name = "rehash-wasm-loader"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 
 [lib]
@@ -14,4 +14,4 @@ wasm-bindings-lib = { path = "../wasm-bindings-lib", features = ["tauri"] }
 
 [dependencies.web-sys]
 version = "0.3"
-features = ["Response"]
+features = ["Blob", "BlobPropertyBag", "Url", "Document", "HtmlElement", "Window"]
