@@ -1,1 +1,1 @@
-wasm-pack build --target web --out-dir static/pkg --dev
+wasm-pack build --target web --out-dir src-tauri/pkg --dev
