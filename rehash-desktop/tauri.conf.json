@@ -4,7 +4,7 @@
   "identifier": "dev.gruncan.rehash",
   "build": {
     "frontendDist": "../static",
-    "beforeDevCommand": "wasm-pack build --target web --out-dir ../pkg --dev",
+    "beforeDevCommand": null,
     "beforeBuildCommand": null
   },
   "app": {
@@ -31,13 +31,6 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "resources": [
-      "pkg/package.json",
-      "pkg/rehash.d.ts",
-      "pkg/rehash.js",
-      "pkg/rehash_bg.wasm",
-      "pkg/rehash_bg.wasm.d.ts"
-    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

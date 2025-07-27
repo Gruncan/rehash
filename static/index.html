@@ -96,19 +96,9 @@
     </div>
 </div>
 <script type="module">
-    const path = await window.__TAURI__.path.resolveResource("pkg/rehash.js");
-    const content = await window.__TAURI__.fs.readTextFile(path);
-    const blob = new Blob([content], {type: 'application/javascript'});
-    const blobUrl = URL.createObjectURL(blob);
+    import init from "./rehash_wasm_frontend.js"
 
-    const wasm_path = await window.__TAURI__.path.resolveResource("pkg/rehash_bg.wasm");
-    const wasmResp = await fetch(wasm_path);
-    const wasmBlob = await wasmResp.arrayBuffer();
-
-    const module = await import(blobUrl);
-    const init = module.default
-
-    init(wasmBlob).catch(console.error)
+    init().catch(console.error);
 
 </script>
 </body>
