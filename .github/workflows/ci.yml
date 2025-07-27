@@ -2,7 +2,7 @@ name: ci.yml
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   build_rehash_wasm_binding_lib:
