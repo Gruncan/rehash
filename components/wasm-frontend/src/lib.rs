@@ -48,7 +48,7 @@ fn create_shared_video_player(html_controller: Rc<dyn VideoUIController<HtmlVide
 
 
 async fn init() -> JsResult<()> {
-    console_log!("WASM {}", WASM_VERSION);
+    console_log!("WASM version: {}", WASM_VERSION);
     let window = web_sys::window().ok_or("Failed to get window")?;
     let document = window.document().ok_or("Failed to get document")?;
     let video_element = document.get_element_by_id("video-player")

@@ -53,6 +53,7 @@ async fn load_wasm(name: &str) -> Result<(), JsValue> {
 
 #[wasm_bindgen(start)]
 pub fn main() {
+    console_log!("Loader version: {}", WASM_VERSION);
     set_panic_hook();
 
     #[cfg(debug_assertions)]

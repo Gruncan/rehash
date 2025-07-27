@@ -37,6 +37,7 @@ async fn get_video_bytes(path: String) -> Result<Vec<u8>, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    println!("Desktop version: {}", DESKTOP_VERSION);
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
@@ -48,8 +49,6 @@ pub fn run() {
                         .build(),
                 )?;
             }
-            let resource_path = app.path().resolve("pkg/rehash_wasm_frontend.js", BaseDirectory::Resource)?;
-            println!("Resource path: {:?}", resource_path);
 
             let open = MenuItemBuilder::new("Open").id("open").build(app)?;
 
