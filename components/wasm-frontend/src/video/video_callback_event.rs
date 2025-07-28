@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex};
 use wasm_bindgen::JsValue;
 
 
+// TODO remove this Arc mutex since it is all single threaded.
 pub(crate) type EventCtxType<T> = Arc<Mutex<T>>;
 
 
@@ -372,7 +373,7 @@ where
     T: BarDraggable + 'static,
 {
     video_player: SharedVideoPlayer,
-    percent: f64,
+    pub(crate) percent: f64,
     marker: PhantomData<T>,
     action_id: TypeId,
 }
