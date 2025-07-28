@@ -57,7 +57,7 @@ impl CallbackController for FileOpenCallbackController {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct FileOpenEvent {}
 
 #[derive(Clone)]
@@ -95,6 +95,10 @@ impl CallbackEvent<FileOpenEventCtxType> for FileOpenEvent
         });
 
         Ok(())
+    }
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<FileOpenEventCtxType>> {
+        Box::new(self.clone())
     }
 }
 

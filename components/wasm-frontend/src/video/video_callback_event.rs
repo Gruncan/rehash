@@ -5,10 +5,16 @@ use crate::JsResult;
 use crate::{debug_console_log, log_to_tauri};
 use std::any::TypeId;
 use std::fmt::{Debug, Formatter};
+use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::JsValue;
 
+
+pub(crate) type EventCtxType<T> = Arc<Mutex<T>>;
+
+
+#[derive(Clone)]
 pub(crate) struct PlayPauseEvent<I>
 where
     I: VideoInternal + 'static,
@@ -83,6 +89,10 @@ where
 
         Ok(())
     }
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<SharedVideoPlayer>> {
+        Box::new(self.clone())
+    }
 }
 
 impl<I> PlayPauseEvent<I>
@@ -113,7 +123,7 @@ enum Muted {}
 enum Unmuted {}
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct MuteUnmuteEvent {
     type_id: TypeId,
 }
@@ -143,6 +153,10 @@ impl CallbackEvent<SharedVideoPlayer> for MuteUnmuteEvent {
 
         Ok(())
     }
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<SharedVideoPlayer>> {
+        Box::new(self.clone())
+    }
 }
 
 
@@ -153,7 +167,7 @@ impl MuteUnmuteEvent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct ProgressBarChangeEvent {
 
 }
@@ -174,9 +188,13 @@ impl CallbackEvent<SharedVideoPlayer> for ProgressBarChangeEvent {
 
         Ok(())
     }
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<SharedVideoPlayer>> {
+        Box::new(self.clone())
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct SettingsEvent {}
 
 impl CallbackEventInit for SettingsEvent {
@@ -192,9 +210,13 @@ impl CallbackEvent<SharedVideoPlayer> for SettingsEvent
         debug_console_log!("Triggering settings");
         Ok(())
     }
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<SharedVideoPlayer>> {
+        Box::new(self.clone())
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct FullScreenEvent {}
 
 impl CallbackEventInit for FullScreenEvent {
@@ -209,9 +231,13 @@ impl CallbackEvent<SharedVideoPlayer> for FullScreenEvent
         debug_console_log!("Triggering fullscreen");
         Ok(())
     }
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<SharedVideoPlayer>> {
+        Box::new(self.clone())
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct RewindEvent {}
 
 impl CallbackEventInit for RewindEvent {
@@ -228,9 +254,13 @@ impl CallbackEvent<SharedVideoPlayer> for RewindEvent
         mutex.rewind();
         Ok(())
     }
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<SharedVideoPlayer>> {
+        Box::new(self.clone())
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct FastForwardEvent {}
 
 impl CallbackEventInit for FastForwardEvent {
@@ -247,17 +277,20 @@ impl CallbackEvent<SharedVideoPlayer> for FastForwardEvent
         mutex.fast_forward();
         Ok(())
     }
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<SharedVideoPlayer>> {
+        Box::new(self.clone())
+    }
 }
 
 
-pub(crate) type ProgressBarClickEventCtxType = Arc<Mutex<ProgressBarClickEventCtx>>;
 
 pub(crate) struct ProgressBarClickEventCtx {
     pub(crate) video_player: SharedVideoPlayer,
     pub(crate) time_to_seek: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct ProgressBarClickEvent {}
 
 impl CallbackEventInit for ProgressBarClickEvent {
@@ -267,8 +300,8 @@ impl CallbackEventInit for ProgressBarClickEvent {
 }
 
 
-impl CallbackEvent<ProgressBarClickEventCtxType> for ProgressBarClickEvent {
-    fn trigger(&mut self, ctx: &mut ProgressBarClickEventCtxType) -> JsResult<()> {
+impl CallbackEvent<EventCtxType<ProgressBarClickEventCtx>> for ProgressBarClickEvent {
+    fn trigger(&mut self, ctx: &mut EventCtxType<ProgressBarClickEventCtx>) -> JsResult<()> {
         debug_console_log!("Triggering progress bar click event");
         let progress_mutex = ctx.lock().unwrap();
         let percent = progress_mutex.time_to_seek;
@@ -279,16 +312,19 @@ impl CallbackEvent<ProgressBarClickEventCtxType> for ProgressBarClickEvent {
 
         Ok(())
     }
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<EventCtxType<ProgressBarClickEventCtx>>> {
+        Box::new(self.clone())
+    }
 }
 
-pub(crate) type VolumeBarClickEventCtxType = Arc<Mutex<VolumeBarClickEventCtx>>;
 
 pub(crate) struct VolumeBarClickEventCtx {
     pub(crate) video_player: SharedVideoPlayer,
     pub(crate) volume_to_set: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct VolumeBarClickEvent {}
 
 impl CallbackEventInit for VolumeBarClickEvent {
@@ -298,8 +334,8 @@ impl CallbackEventInit for VolumeBarClickEvent {
 }
 
 
-impl CallbackEvent<VolumeBarClickEventCtxType> for VolumeBarClickEvent {
-    fn trigger(&mut self, ctx: &mut VolumeBarClickEventCtxType) -> JsResult<()> {
+impl CallbackEvent<EventCtxType<VolumeBarClickEventCtx>> for VolumeBarClickEvent {
+    fn trigger(&mut self, ctx: &mut EventCtxType<VolumeBarClickEventCtx>) -> JsResult<()> {
         debug_console_log!("Triggering volume bar click event");
         let progress_mutex = ctx.lock().unwrap();
         let percent = progress_mutex.volume_to_set;
@@ -309,8 +345,111 @@ impl CallbackEvent<VolumeBarClickEventCtxType> for VolumeBarClickEvent {
 
         Ok(())
     }
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<EventCtxType<VolumeBarClickEventCtx>>> {
+        Box::new(self.clone())
+    }
 }
 
+
+pub(crate) enum MouseDown {}
+pub(crate) enum MouseUp {}
+pub(crate) enum MouseMove {}
+
+pub(crate) trait DragAction {}
+pub(crate) trait BarDraggable {}
+
+impl DragAction for MouseMove {}
+impl DragAction for MouseUp {}
+impl DragAction for MouseDown {}
+
+impl BarDraggable for VolumeBarClickEvent {}
+impl BarDraggable for ProgressBarClickEvent {}
+
+
+pub(crate) struct BarDragEventEventCtx<T>
+where
+    T: BarDraggable + 'static,
+{
+    video_player: SharedVideoPlayer,
+    percent: f64,
+    marker: PhantomData<T>,
+    action_id: TypeId,
+}
+
+impl<T> BarDragEventEventCtx<T>
+where
+    T: BarDraggable + 'static,
+{
+    pub(crate) fn new<A>(video_player: SharedVideoPlayer, percent: f64) -> Self
+    where
+        A: DragAction + 'static,
+    {
+        Self {
+            video_player,
+            percent,
+            marker: PhantomData,
+            action_id: TypeId::of::<A>(),
+        }
+    }
+}
+
+
+#[derive(Debug, Clone)]
+pub(crate) struct BarDragEvent {}
+
+impl CallbackEventInit for BarDragEvent
+{
+    fn new() -> Self {
+        Self {}
+    }
+}
+
+
+impl CallbackEvent<EventCtxType<BarDragEventEventCtx<ProgressBarClickEvent>>> for BarDragEvent
+{
+    fn trigger(&mut self, ctx: &mut EventCtxType<BarDragEventEventCtx<ProgressBarClickEvent>>) -> JsResult<()> {
+        // let mutex = ctx.lock().unwrap();
+        debug_console_log!("Triggering progress bar drag event");
+
+        Ok(())
+    }
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<EventCtxType<BarDragEventEventCtx<ProgressBarClickEvent>>>> {
+        Box::new(self.clone())
+    }
+}
+
+impl CallbackEvent<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>> for BarDragEvent
+{
+    fn trigger(&mut self, ctx: &mut EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>) -> JsResult<()> {
+        let mutex = ctx.lock().unwrap();
+        // debug_console_log!("Triggering volume bar drag event");
+
+        match mutex.action_id {
+            id if id == TypeId::of::<MouseDown>() => {
+                debug_console_log!("Triggering progress volume mouse down");
+                // let percent = mutex.percent;
+                // debug_console_log!("Volume Percent: {}%", percent);
+                // let video_mutex = mutex.video_player.lock().unwrap();
+                // video_mutex.set_volume(percent);
+            },
+            id if id == TypeId::of::<MouseUp>() => {
+                debug_console_log!("Triggering progress volume mouse up");
+            },
+            id if id == TypeId::of::<MouseMove>() => {},
+            _ => {
+                return Err(JsValue::from_str("Callback play event has incorrect type"))
+            }
+        }
+
+        Ok(())
+    }
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>>> {
+        Box::new(self.clone())
+    }
+}
 
 
 

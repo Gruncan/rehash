@@ -1,10 +1,10 @@
 use crate::event::CallbackController;
-use crate::get_element_as;
 use crate::prelude::*;
-use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, FastForwardEvent, FullScreenEvent, MuteUnmuteEvent, PlayPauseEvent, ProgressBarChangeEvent, ProgressBarClickEvent, ProgressBarClickEventCtx, ProgressBarClickEventCtxType, RewindEvent, SettingsEvent, VolumeBarClickEvent, VolumeBarClickEventCtx, VolumeBarClickEventCtxType};
+use crate::video::video_callback_event::*;
 use crate::video::video_internal::{VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
 use crate::{callback_event, console_log, debug_console_log, JsResult};
+use crate::get_element_as;
 use std::cell::RefCell;
 use std::cmp::PartialOrd;
 use std::collections::HashMap;
@@ -317,8 +317,10 @@ pub(crate) struct HtmlVideoCallbackController {
     callback_keyboard_events: HashMap<String, Event>,
     callback_control_events: HashMap<String, Event>,
     callback_progress_event: Event,
-    callback_progress_click_event: EventT<ProgressBarClickEventCtxType>,
-    callback_volume_click_event: EventT<VolumeBarClickEventCtxType>
+    // callback_progress_click_event: EventT<EventCtxType<ProgressBarClickEventCtx>>,
+    // callback_volume_click_event: EventT<EventCtxType<VolumeBarClickEventCtx>>,
+    callback_volume_drag_event: EventT<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>>,
+    callback_progress_drag_event: EventT<EventCtxType<BarDragEventEventCtx<ProgressBarClickEvent>>>,
 }
 
 
@@ -338,8 +340,12 @@ impl HtmlVideoCallbackController {
         let progress_event: Event = callback_event!(ProgressBarChangeEvent);
         let settings_event: Event = callback_event!(SettingsEvent);
         let fullscreen_event: Event = callback_event!(FullScreenEvent);
-        let progress_click_event: EventT<ProgressBarClickEventCtxType> = callback_event!(ProgressBarClickEvent);
-        let volume_click_event: EventT<VolumeBarClickEventCtxType> = callback_event!(VolumeBarClickEvent);
+        // let progress_click_event: EventT<EventCtxType<ProgressBarClickEventCtx>> = !(ProgressBarClickEvent);
+        // let volume_click_event: EventT<EventCtxType<VolumeBarClickEventCtx>> = callback_event!(VolumeBarClickEvent);
+
+        let volume_drag_event: EventT<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>> = callback_event!(BarDragEvent);
+        let progress_drag_event: EventT<EventCtxType<BarDragEventEventCtx<ProgressBarClickEvent>>> = callback_event!(BarDragEvent);
+
 
         let fast_forward_event: Event = callback_event!(FastForwardEvent);
         let rewind_event: Event = callback_event!(RewindEvent);
@@ -367,8 +373,10 @@ impl HtmlVideoCallbackController {
             callback_keyboard_events: keyboard_events,
             callback_control_events: control_events,
             callback_progress_event: progress_event,
-            callback_progress_click_event: progress_click_event,
-            callback_volume_click_event: volume_click_event
+            // callback_progress_click_event: progress_click_event,
+            // callback_volume_click_event: volume_click_event,
+            callback_volume_drag_event: volume_drag_event,
+            callback_progress_drag_event: progress_drag_event,
         }
     }
 }
@@ -418,20 +426,70 @@ impl CallbackController for HtmlVideoCallbackController {
 
         self.ui_controller.register_global_event_listener_specific("timeupdate", timeupdate_closure);
 
-        let video_player_p = self.video_player.clone();
-        let p = self.callback_progress_click_event.clone();
-        let progress_bar_click_closure: Box<Closure<dyn FnMut(web_sys::MouseEvent)>> = Box::new(Closure::new(move |event: web_sys::MouseEvent| {
+        // let video_player_p = self.video_player.clone();
+        // let p = self.callback_progress_click_event.clone();
+        // let progress_bar_click_closure: Box<Closure<dyn FnMut(web_sys::MouseEvent)>> = Box::new(Closure::new(move |event: web_sys::MouseEvent| {
+        //     let target = event.target().unwrap();
+        //     if let Some(element) = target.dyn_ref::<HtmlElement>() {
+        //         let rec = element.get_bounding_client_rect();
+        //         let click_x = event.client_x() as f64;
+        //         let percent = (click_x - rec.left()) / rec.width();
+        //
+        //         // think unneeded as trigger will take 'single ownership'
+        //         // todo fix second player clone
+        //         let mut ctx = Arc::new(Mutex::new(ProgressBarClickEventCtx { video_player: video_player_p.clone(), time_to_seek: percent }));
+        //         let mut callback = p.borrow_mut();
+        //         match callback.trigger(&mut ctx) {
+        //             Ok(_) => {}
+        //             Err(e) => {
+        //                 debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
+        //             }
+        //         }
+        //     }
+        // }));
+
+        // self.ui_controller.register_element_event_listener_specific("click", Self::PROGRESS_BAR_ID, progress_bar_click_closure);
+
+        // let video_player_v = self.video_player.clone();
+        // let v = self.callback_volume_click_event.clone();
+        // let volume_bar_click_closure: Box<Closure<dyn FnMut(web_sys::MouseEvent)>> = Box::new(Closure::new(move |event: web_sys::MouseEvent| {
+        //     let target = event.target().unwrap();
+        //     if let Some(element) = target.dyn_ref::<HtmlElement>() {
+        //         let rec = element.get_bounding_client_rect();
+        //         let click_x = event.client_x() as f64;
+        //         let percent = (click_x - rec.left()) / rec.width();
+        //
+        //         // think unneeded as trigger will take 'single ownership'
+        //         // todo fix second player clone
+        //         let mut ctx = Arc::new(Mutex::new(VolumeBarClickEventCtx { video_player: video_player_v.clone(), volume_to_set: percent }));
+        //         let mut callback = v.borrow_mut();
+        //         match callback.trigger(&mut ctx) {
+        //             Ok(_) => {}
+        //             Err(e) => {
+        //                 debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
+        //             }
+        //         }
+        //     }
+        // }));
+        //
+        // self.ui_controller.register_element_event_listener_specific("click", Self::VOLUME_ID, volume_bar_click_closure);
+
+
+        let video_player_vd = self.video_player.clone();
+        let callback = self.callback_volume_drag_event.borrow_mut();
+        let mut v_callback = callback.clone_box();
+        let volume_bar_drag_closure: Box<Closure<dyn FnMut(web_sys::MouseEvent)>> = Box::new(Closure::new(move |event: web_sys::MouseEvent| {
             let target = event.target().unwrap();
             if let Some(element) = target.dyn_ref::<HtmlElement>() {
                 let rec = element.get_bounding_client_rect();
                 let click_x = event.client_x() as f64;
-                let percent = (click_x - rec.left()) / rec.width();
+                let percent = (click_x - rec.left()) / rec.width().min(0f64);
 
                 // think unneeded as trigger will take 'single ownership'
                 // todo fix second player clone
-                let mut ctx = Arc::new(Mutex::new(ProgressBarClickEventCtx { video_player: video_player_p.clone(), time_to_seek: percent }));
-                let mut callback = p.borrow_mut();
-                match callback.trigger(&mut ctx) {
+                let ctx: BarDragEventEventCtx<VolumeBarClickEvent> = BarDragEventEventCtx::new::<MouseDown>(video_player_vd.clone(), percent);
+                let mut ctx = Arc::new(Mutex::new(ctx));
+                match v_callback.trigger(&mut ctx) {
                     Ok(_) => {}
                     Err(e) => {
                         debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
@@ -440,22 +498,22 @@ impl CallbackController for HtmlVideoCallbackController {
             }
         }));
 
-        self.ui_controller.register_element_event_listener_specific("click", Self::PROGRESS_BAR_ID, progress_bar_click_closure);
+        self.ui_controller.register_element_event_listener_specific("mousedown", Self::VOLUME_ID, volume_bar_drag_closure);
 
-        let video_player_v = self.video_player.clone();
-        let v = self.callback_volume_click_event.clone();
-        let volume_bar_click_closure: Box<Closure<dyn FnMut(web_sys::MouseEvent)>> = Box::new(Closure::new(move |event: web_sys::MouseEvent| {
+        let video_player_vdu = self.video_player.clone();
+        let mut vd_callback = callback.clone_box();
+        let volume_bar_drag_up_closure: Box<Closure<dyn FnMut(web_sys::MouseEvent)>> = Box::new(Closure::new(move |event: web_sys::MouseEvent| {
             let target = event.target().unwrap();
             if let Some(element) = target.dyn_ref::<HtmlElement>() {
                 let rec = element.get_bounding_client_rect();
                 let click_x = event.client_x() as f64;
-                let percent = (click_x - rec.left()) / rec.width();
+                let percent = (click_x - rec.left()) / rec.width().min(0f64);
 
                 // think unneeded as trigger will take 'single ownership'
                 // todo fix second player clone
-                let mut ctx = Arc::new(Mutex::new(VolumeBarClickEventCtx { video_player: video_player_v.clone(), volume_to_set: percent }));
-                let mut callback = v.borrow_mut();
-                match callback.trigger(&mut ctx) {
+                let ctx: BarDragEventEventCtx<VolumeBarClickEvent> = BarDragEventEventCtx::new::<MouseUp>(video_player_vdu.clone(), percent);
+                let mut ctx = Arc::new(Mutex::new(ctx));
+                match vd_callback.trigger(&mut ctx) {
                     Ok(_) => {}
                     Err(e) => {
                         debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
@@ -464,9 +522,13 @@ impl CallbackController for HtmlVideoCallbackController {
             }
         }));
 
-        self.ui_controller.register_element_event_listener_specific("click", Self::VOLUME_ID, volume_bar_click_closure);
+        self.ui_controller.register_element_event_listener_specific("mouseup", Self::VOLUME_ID, volume_bar_drag_up_closure);
+
+
     }
 }
+
+fn async_callback_handler(ctx: &mut SharedVideoPlayer) {}
 
 
 fn callback_handler(ctx: &mut SharedVideoPlayer, callback_ref_opt: Option<&Event>) -> JsResult<()> {
