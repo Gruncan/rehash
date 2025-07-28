@@ -1,6 +1,7 @@
 use crate::event::CallbackController;
 use crate::get_element_as;
 use crate::prelude::*;
+use crate::video::html_video::volume_closure::create_volume_closures;
 use crate::video::video_callback_event::*;
 use crate::video::video_internal::{VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoPlayerState, VideoUIController, VideoUIRegister};
@@ -402,40 +403,64 @@ where
 impl ClosureWrapperEventType for web_sys::MouseEvent {}
 impl ClosureWrapperEventType for web_sys::Event {}
 
+mod volume_closure {
+    use super::*;
 
-pub(crate) struct VolumeBarDragMouseUp {
-    ctx: EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>,
-    callback: Rc<RefCell<dyn CallbackEvent<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>>>>,
-}
+    type Ctx = EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>;
+    type Callback = Rc<RefCell<dyn CallbackEvent<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>>>>;
+    type Closure = Box<wasm_bindgen::closure::Closure<dyn FnMut(web_sys::Event)>>;
 
-impl VolumeBarDragMouseUp {
-    fn new(ctx: EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>, callback: Rc<RefCell<dyn CallbackEvent<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>>>>) -> Self {
-        Self { ctx, callback }
+    pub(crate) struct VolumeBarDragClosure {
+        ctx: Ctx,
+        callback: Callback,
     }
-}
 
-impl CallbackClosureWrapper<web_sys::MouseEvent> for VolumeBarDragMouseUp {
-    fn closure(&mut self, event: web_sys::MouseEvent) {
-        let target = event.target().unwrap();
-        if let Some(element) = target.dyn_ref::<HtmlElement>() {
-            let rec = element.get_bounding_client_rect();
-            let click_x = event.client_x() as f64;
-            let percent = (click_x - rec.left()) / rec.width().min(0f64);
+    impl VolumeBarDragClosure {
+        pub(crate) fn new(ctx: Ctx, callback: Callback) -> Self {
+            Self { ctx, callback }
+        }
+    }
 
-            {
-                let mut ctx = self.ctx.lock().unwrap();
-                ctx.percent = percent;
-            }
+    impl CallbackClosureWrapper<web_sys::MouseEvent> for VolumeBarDragClosure {
+        fn closure(&mut self, event: web_sys::MouseEvent) {
+            let target = event.target().unwrap();
+            if let Some(element) = target.dyn_ref::<HtmlElement>() {
+                let rec = element.get_bounding_client_rect();
+                let click_x = event.client_x() as f64;
+                let percent = (click_x - rec.left()) / rec.width().min(0f64);
 
-            // todo fix second player clone
-            let mut callback = self.callback.borrow_mut();
-            match callback.trigger(&mut self.ctx) {
-                Ok(_) => {}
-                Err(e) => {
-                    debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
+                {
+                    let mut ctx = self.ctx.lock().unwrap();
+                    ctx.percent = percent;
+                }
+
+                // todo fix second player clone
+                let mut callback = self.callback.borrow_mut();
+                match callback.trigger(&mut self.ctx) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
+                    }
                 }
             }
         }
+    }
+
+    pub fn create_volume_closures<T>(video_player: SharedVideoPlayer, callback: Callback) -> Closure
+    where
+        T: DragAction + 'static,
+    {
+        let ctx = Arc::new(
+            Mutex::new(
+                BarDragEventEventCtx::new::<T>(video_player)
+            )
+        );
+        let ref_closure_wrapper = Rc::new(
+            RefCell::new(
+                VolumeBarDragClosure::new(ctx, callback)
+            )
+        );
+        CallbackClosureWrapper::create_callback(ref_closure_wrapper)
     }
 }
 
@@ -602,17 +627,17 @@ impl CallbackController for HtmlVideoCallbackController {
         //     }
         // }));
 
-        let callback = self.callback_volume_drag_event.clone();
-        let video_player_vdu = self.video_player.clone();
+        // let callback = self.callback_volume_drag_event.clone();
+        // let video_player_vdu = self.video_player.clone();
         // let callback: EventCtxType<Box<BarDragEventEventCtx<VolumeBarClickEvent>>> = cb;
         // let vd_callback: EventT<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>> = callback;
-        let ctx: BarDragEventEventCtx<VolumeBarClickEvent> = BarDragEventEventCtx::new::<MouseUp>(video_player_vdu, 0f64);
-        let ctx = Arc::new(Mutex::new(ctx));
-        let v = Rc::new(RefCell::new(VolumeBarDragMouseUp::new(ctx, callback)));
-        let volume_bar_drag_up_closure = CallbackClosureWrapper::create_callback(v);
 
 
-        self.ui_controller.register_element_event_listener_specific("mouseup", Self::VOLUME_ID, volume_bar_drag_up_closure);
+        let mouse_up_volume_closure = create_volume_closures::<MouseUp>(self.video_player.clone(), self.callback_volume_drag_event.clone());
+        self.ui_controller.register_element_event_listener_specific("mouseup", Self::VOLUME_ID, mouse_up_volume_closure);
+
+        let mouse_down_volume_closure = create_volume_closures::<MouseDown>(self.video_player.clone(), self.callback_volume_drag_event.clone());
+        self.ui_controller.register_element_event_listener_specific("mousedown", Self::VOLUME_ID, mouse_down_volume_closure);
 
 
     }

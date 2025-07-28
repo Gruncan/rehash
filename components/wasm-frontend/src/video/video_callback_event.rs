@@ -382,13 +382,13 @@ impl<T> BarDragEventEventCtx<T>
 where
     T: BarDraggable + 'static,
 {
-    pub(crate) fn new<A>(video_player: SharedVideoPlayer, percent: f64) -> Self
+    pub(crate) fn new<A>(video_player: SharedVideoPlayer) -> Self
     where
         A: DragAction + 'static,
     {
         Self {
             video_player,
-            percent,
+            percent: Default::default(),
             marker: PhantomData,
             action_id: TypeId::of::<A>(),
         }
