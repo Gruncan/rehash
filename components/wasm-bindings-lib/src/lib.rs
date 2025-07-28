@@ -3,7 +3,6 @@ use std::panic;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 
-
 #[wasm_bindgen]
 extern "C" {
     pub fn alert(s: &str);
@@ -63,16 +62,41 @@ pub fn error_to_tauri(msg: &str) {
 }
 
 
+#[cfg(feature = "tauri")]
 #[macro_export]
 macro_rules! console_log {
-    ($($t:tt)*) => (log_to_tauri(&format_args!($($t)*).to_string()))
+    ($($t:tt)*) => {
+        log_to_tauri(&format_args!($($t)*).to_string())
+    }
 }
 
+#[cfg(not(feature = "tauri"))]
+#[macro_export]
+macro_rules! console_log {
+    ($($t:tt)*) => {
+        log(&format_args!($($t)*).to_string())
+    }
+}
+
+#[cfg(feature = "tauri")]
 #[macro_export]
 macro_rules! error_log {
-    ($($t:tt)*) => (error_to_tauri(&format_args!($($t)*).to_string()))
+
+    ($($t:tt)*) => {
+        error_to_tauri(&format_args!($($t)*).to_string())
+    }
 }
 
+#[cfg(not(feature = "tauri"))]
+#[macro_export]
+macro_rules! error_log {
+
+    ($($t:tt)*) => {
+        error(&format_args!($($t)*).to_string())
+    }
+}
+
+#[cfg(feature = "tauri")]
 #[macro_export]
 macro_rules! debug_console_log {
     ($($t:tt)*) => {
@@ -82,6 +106,18 @@ macro_rules! debug_console_log {
         }
     };
 }
+
+#[cfg(not(feature = "tauri"))]
+#[macro_export]
+macro_rules! debug_console_log {
+    ($($t:tt)*) => {
+        #[cfg(debug_assertions)]
+        {
+            log(&format_args!("[DEBUG] {}", format_args!($($t)*)).to_string())
+        }
+    };
+}
+
 
 pub fn set_panic_hook() {
     panic::set_hook(Box::new(move |info| {
