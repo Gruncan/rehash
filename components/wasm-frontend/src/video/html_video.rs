@@ -12,7 +12,7 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::closure::{Closure, WasmClosure};
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Document, Element, HtmlDivElement, HtmlElement, HtmlSpanElement, HtmlVideoElement, KeyboardEvent, MouseEvent, SvgElement};
+use web_sys::{Document, Element, HtmlDivElement, HtmlElement, HtmlSpanElement, HtmlVideoElement, SvgElement};
 
 const SKIP_INCREMENT: f64 = 5.0;
 
@@ -399,7 +399,7 @@ where
     }
 }
 
-impl ClosureWrapperEventType for MouseEvent {}
+impl ClosureWrapperEventType for web_sys::MouseEvent {}
 impl ClosureWrapperEventType for web_sys::Event {}
 
 
@@ -414,8 +414,8 @@ impl VolumeBarDragMouseUp {
     }
 }
 
-impl CallbackClosureWrapper<MouseEvent> for VolumeBarDragMouseUp {
-    fn closure(&mut self, event: MouseEvent) {
+impl CallbackClosureWrapper<web_sys::MouseEvent> for VolumeBarDragMouseUp {
+    fn closure(&mut self, event: web_sys::MouseEvent) {
         let target = event.target().unwrap();
         if let Some(element) = target.dyn_ref::<HtmlElement>() {
             let rec = element.get_bounding_client_rect();
@@ -466,7 +466,7 @@ impl CallbackController for HtmlVideoCallbackController {
         let mut video_player_k = self.video_player.clone();
         let d = self.callback_keyboard_events.clone();
 
-        let keyboard_closure: Box<Closure<dyn FnMut(KeyboardEvent)>> = Box::new(Closure::new(move |event: KeyboardEvent| {
+        let keyboard_closure: Box<Closure<dyn FnMut(web_sys::KeyboardEvent)>> = Box::new(Closure::new(move |event: web_sys::KeyboardEvent| {
             let key = event.key();
             #[cfg(not(debug_assertions))]
             {
