@@ -1,3 +1,4 @@
+use crate::callback_event;
 use crate::html::html_callback::control_closure::ControlClosure;
 use crate::html::html_callback::keyboard_closure::KeyboardClosure;
 use crate::html::html_callback::time_update_closure::TimeUpdateClosure;
@@ -14,16 +15,16 @@ use crate::html::html_ui::HtmlVideoUIController;
 use crate::html::html_video::HtmlVideoPlayerInternal;
 use crate::video::event::{CallbackController, CallbackEvent, EventCtxType};
 use crate::video::video_callback::CallbackClosureWrapper;
-use crate::video::video_callback::{SharedVideoPlayer, VideoPlayerState};
+use crate::video::video_callback::SharedVideoPlayer;
 use crate::video::video_ui::VideoUIRegister;
-use crate::callback_event;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::JsCast;
-use wasm_bindings_lib::debug_console_log;
 use web_sys::Element;
+
+use crate::prelude::*;
 
 pub(crate) struct HtmlVideoCallbackController {
     video_player: SharedVideoPlayer,
@@ -31,8 +32,6 @@ pub(crate) struct HtmlVideoCallbackController {
     callback_keyboard_events: HashMap<String, crate::html::html_video::Event>,
     callback_control_events: HashMap<String, crate::html::html_video::Event>,
     callback_progress_event: crate::html::html_video::Event,
-    // callback_progress_click_event: EventT<EventCtxType<ProgressBarClickEventCtx>>,
-    // callback_volume_click_event: EventT<EventCtxType<VolumeBarClickEventCtx>>,
     callback_volume_drag_event: crate::html::html_video::EventT<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>>,
     callback_progress_drag_event: crate::html::html_video::EventT<EventCtxType<BarDragEventEventCtx<ProgressBarClickEvent>>>,
 }
@@ -54,8 +53,6 @@ impl HtmlVideoCallbackController {
         let progress_event: crate::html::html_video::Event = callback_event!(ProgressBarChangeEvent);
         let settings_event: crate::html::html_video::Event = callback_event!(SettingsEvent);
         let fullscreen_event: crate::html::html_video::Event = callback_event!(FullScreenEvent);
-        // let progress_click_event: EventT<EventCtxType<ProgressBarClickEventCtx>> = !(ProgressBarClickEvent);
-        // let volume_click_event: EventT<EventCtxType<VolumeBarClickEventCtx>> = callback_event!(VolumeBarClickEvent);
 
         let volume_drag_event: crate::html::html_video::EventT<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>> = callback_event!(BarDragEvent);
         let progress_drag_event: crate::html::html_video::EventT<EventCtxType<BarDragEventEventCtx<ProgressBarClickEvent>>> = callback_event!(BarDragEvent);
@@ -87,8 +84,6 @@ impl HtmlVideoCallbackController {
             callback_keyboard_events: keyboard_events,
             callback_control_events: control_events,
             callback_progress_event: progress_event,
-            // callback_progress_click_event: progress_click_event,
-            // callback_volume_click_event: volume_click_event,
             callback_volume_drag_event: volume_drag_event,
             callback_progress_drag_event: progress_drag_event,
         }
@@ -138,6 +133,7 @@ impl CallbackController for HtmlVideoCallbackController {
 mod volume_closure {
     use super::*;
     use crate::html::html_events::drag_events::DragAction;
+    use crate::log_to_tauri;
     use crate::video::event::EventCtxType;
     use crate::video::video_callback::CallbackClosureWrapper;
     use web_sys::HtmlElement;
