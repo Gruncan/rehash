@@ -1,1 +1,1 @@
-pub(crate) use wasm_bindings_lib::*;
+pub use wasm_bindings_lib::*;

@@ -2,23 +2,31 @@ use crate::JsResult;
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
-pub(crate) trait CallbackController {
-    fn register_events(&mut self);
-}
 
 pub(crate) type CallbackEventType<T> = Rc<RefCell<T>>;
+pub(crate) type EventCtxType<T> = Arc<Mutex<T>>;
+
+pub(crate) trait CallbackController {
+    fn register_events(&self);
+}
+
 
 
 pub(crate) trait CallbackEvent<T>: Debug
 {
     fn trigger(&mut self, ctx: &mut T) -> JsResult<()>;
+
+    fn clone_box(&self) -> Box<dyn CallbackEvent<T>>;
 }
 
-pub(crate) trait CallbackEventInit {
-    // Forces callback_event marco to work correctly
-    fn new() -> Self;
+impl<T> Clone for Box<dyn CallbackEvent<T>> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
 }
+
 
 #[macro_export]
 macro_rules! callback_event {
