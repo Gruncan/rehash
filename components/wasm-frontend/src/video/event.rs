@@ -9,7 +9,7 @@ pub(crate) type CallbackEventType<T> = Rc<RefCell<T>>;
 pub(crate) type EventCtxType<T> = Arc<Mutex<T>>;
 
 pub(crate) trait CallbackController {
-    fn register_events(&mut self);
+    fn register_events(&self);
 }
 
 

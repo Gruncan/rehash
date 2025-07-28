@@ -92,6 +92,7 @@ where
         self.video_controller.update_progress(progress, duration)
     }
 
+
     fn set_video_progress(&self, progress: f64) {
         self.internal.set_video_progress(progress);
     }

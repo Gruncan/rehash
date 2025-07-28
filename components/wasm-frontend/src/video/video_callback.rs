@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
 use wasm_bindgen::closure::Closure;
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast, JsValue};
 
 
 pub(crate) trait ClosureWrapperEventType {}
@@ -25,5 +25,7 @@ where
     }
 }
 
-impl ClosureWrapperEventType for web_sys::MouseEvent {}
 impl ClosureWrapperEventType for web_sys::Event {}
+impl ClosureWrapperEventType for web_sys::MouseEvent {}
+impl ClosureWrapperEventType for web_sys::KeyboardEvent {}
+impl ClosureWrapperEventType for JsValue {}

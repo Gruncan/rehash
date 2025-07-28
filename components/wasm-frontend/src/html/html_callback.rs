@@ -1,4 +1,6 @@
-use crate::html::html_callback::time_update_closure::TimeUpdate;
+use crate::html::html_callback::control_closure::ControlClosure;
+use crate::html::html_callback::keyboard_closure::KeyboardClosure;
+use crate::html::html_callback::time_update_closure::TimeUpdateClosure;
 use crate::html::html_callback::volume_closure::create_volume_closures;
 use crate::html::html_events::drag_events::{BarDragEvent, BarDragEventEventCtx, MouseDown, MouseUp, ProgressBarClickEvent, VolumeBarClickEvent};
 use crate::html::html_events::fast_forward_event::FastForwardEvent;
@@ -10,18 +12,17 @@ use crate::html::html_events::rewind_event::RewindEvent;
 use crate::html::html_events::settings_event::SettingsEvent;
 use crate::html::html_ui::HtmlVideoUIController;
 use crate::html::html_video::HtmlVideoPlayerInternal;
-use crate::log_to_tauri;
 use crate::video::event::{CallbackController, CallbackEvent, EventCtxType};
+use crate::video::video_callback::CallbackClosureWrapper;
 use crate::video::video_callback::{SharedVideoPlayer, VideoPlayerState};
 use crate::video::video_ui::VideoUIRegister;
-use crate::{callback_event, JsResult};
+use crate::callback_event;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
-use wasm_bindgen::closure::Closure;
-use wasm_bindgen::{JsCast, JsValue};
-use wasm_bindings_lib::{console_log, debug_console_log};
+use wasm_bindgen::JsCast;
+use wasm_bindings_lib::debug_console_log;
 use web_sys::Element;
 
 pub(crate) struct HtmlVideoCallbackController {
@@ -96,150 +97,33 @@ impl HtmlVideoCallbackController {
 
 
 impl CallbackController for HtmlVideoCallbackController {
-    fn register_events(&mut self) {
-        let mut video_player_k = self.video_player.clone();
-        let d = self.callback_keyboard_events.clone();
-
-        let keyboard_closure: Box<Closure<dyn FnMut(web_sys::KeyboardEvent)>> = Box::new(Closure::new(move |event: web_sys::KeyboardEvent| {
-            let key = event.key();
-            #[cfg(not(debug_assertions))]
-            {
-                if !d.contains_key(&key) {
-                    event.prevent_default();
-                }
-            }
-            // TODO use this return
-            let _ = callback_handler(&mut video_player_k, d.get(&key));
-        }));
-
+    fn register_events(&self) {
+        let keyboard = Rc::new(
+            RefCell::new(
+                KeyboardClosure::new(self.video_player.clone(), self.callback_keyboard_events.clone())
+            )
+        );
+        let keyboard_closure = CallbackClosureWrapper::create_callback(keyboard);
         self.ui_controller.register_global_event_listener(keyboard_closure);
 
-        let mut video_player_c = self.video_player.clone();
-        let c = self.callback_control_events.clone();
-        let control_closure: Box<Closure<dyn FnMut(web_sys::Event)>> = Box::new(Closure::new(move |event: web_sys::Event| {
-            let target = event.current_target().expect("Failed to get target for control callback");
 
-            if let Some(element) = target.dyn_ref::<Element>() {
-                let id = element.id();
-                if let Err(e) = callback_handler(&mut video_player_c, c.get(&id)) {
-                    console_log!("Failed callback on ID: {}", id);
-                }
-            }
-        }));
-
+        let control = Rc::new(
+            RefCell::new(
+                ControlClosure::new(self.video_player.clone(), self.callback_control_events.clone())
+            )
+        );
+        let control_closure = CallbackClosureWrapper::create_callback(control);
         let keys: Vec<String> = self.callback_control_events.iter().map(|(k, _)| k.clone()).collect();
         self.ui_controller.register_element_event_listener(keys, control_closure);
 
-        let mut video_player_t = self.video_player.clone();
-        let t: Rc<RefCell<dyn CallbackEvent<Arc<Mutex<Box<dyn VideoPlayerState>>>>>> = self.callback_progress_event.clone();
 
-        let time_update = TimeUpdate::new(video_player_t, t);
-        // let timeupdate_closure: Box<Closure<dyn FnMut()>> = Box::new(Closure::new(move || {
-        //     // TODO use this return
-        //     let _ = callback_handler(&mut video_player_t, Some(&t));
-        // }));
-
-        // self.ui_controller.register_global_event_listener_specific("timeupdate", timeupdate_closure);
-
-        // let video_player_p = self.video_player.clone();
-        // let p = self.callback_progress_click_event.clone();
-        // let progress_bar_click_closure: Box<Closure<dyn FnMut(web_sys::MouseEvent)>> = Box::new(Closure::new(move |event: web_sys::MouseEvent| {
-        //     let target = event.target().unwrap();
-        //     if let Some(element) = target.dyn_ref::<HtmlElement>() {
-        //         let rec = element.get_bounding_client_rect();
-        //         let click_x = event.client_x() as f64;
-        //         let percent = (click_x - rec.left()) / rec.width();
-        //
-        //         // think unneeded as trigger will take 'single ownership'
-        //         // todo fix second player clone
-        //         let mut ctx = Arc::new(Mutex::new(ProgressBarClickEventCtx { video_player: video_player_p.clone(), time_to_seek: percent }));
-        //         let mut callback = p.borrow_mut();
-        //         match callback.trigger(&mut ctx) {
-        //             Ok(_) => {}
-        //             Err(e) => {
-        //                 debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
-        //             }
-        //         }
-        //     }
-        // }));
-
-        // self.ui_controller.register_element_event_listener_specific("click", Self::PROGRESS_BAR_ID, progress_bar_click_closure);
-
-        // let video_player_v = self.video_player.clone();
-        // let v = self.callback_volume_click_event.clone();
-        // let volume_bar_click_closure: Box<Closure<dyn FnMut(web_sys::MouseEvent)>> = Box::new(Closure::new(move |event: web_sys::MouseEvent| {
-        //     let target = event.target().unwrap();
-        //     if let Some(element) = target.dyn_ref::<HtmlElement>() {
-        //         let rec = element.get_bounding_client_rect();
-        //         let click_x = event.client_x() as f64;
-        //         let percent = (click_x - rec.left()) / rec.width();
-        //
-        //         // think unneeded as trigger will take 'single ownership'
-        //         // todo fix second player clone
-        //         let mut ctx = Arc::new(Mutex::new(VolumeBarClickEventCtx { video_player: video_player_v.clone(), volume_to_set: percent }));
-        //         let mut callback = v.borrow_mut();
-        //         match callback.trigger(&mut ctx) {
-        //             Ok(_) => {}
-        //             Err(e) => {
-        //                 debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
-        //             }
-        //         }
-        //     }
-        // }));
-        //
-        // self.ui_controller.register_element_event_listener_specific("click", Self::VOLUME_ID, volume_bar_click_closure);
-
-
-        // let video_player_vd = self.video_player.clone();
-        // let mut v_callback = callback.clone_box();
-        // let volume_bar_drag_closure: Box<Closure<dyn FnMut(web_sys::MouseEvent)>> = Box::new(Closure::new(move |event: web_sys::MouseEvent| {
-        //     let target = event.target().unwrap();
-        //     if let Some(element) = target.dyn_ref::<HtmlElement>() {
-        //         let rec = element.get_bounding_client_rect();
-        //         let click_x = event.client_x() as f64;
-        //         let percent = (click_x - rec.left()) / rec.width().min(0f64);
-        //
-        //         // think unneeded as trigger will take 'single ownership'
-        //         // todo fix second player clone
-        //         let ctx: BarDragEventEventCtx<VolumeBarClickEvent> = BarDragEventEventCtx::new::<MouseDown>(video_player_vd.clone(), percent);
-        //         let mut ctx = Arc::new(Mutex::new(ctx));
-        //         match v_callback.trigger(&mut ctx) {
-        //             Ok(_) => {}
-        //             Err(e) => {
-        //                 debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
-        //             }
-        //         }
-        //     }
-        // }));
-
-        // self.ui_controller.register_element_event_listener_specific("mousedown", Self::VOLUME_ID, volume_bar_drag_closure);
-        //
-        // let video_player_vdu = self.video_player.clone();
-        // let mut vd_callback = callback.clone_box();
-        // let volume_bar_drag_up_closure: Box<Closure<dyn FnMut(web_sys::MouseEvent)>> = Box::new(Closure::new(move |event: web_sys::MouseEvent| {
-        //     let target = event.target().unwrap();
-        //     if let Some(element) = target.dyn_ref::<HtmlElement>() {
-        //         let rec = element.get_bounding_client_rect();
-        //         let click_x = event.client_x() as f64;
-        //         let percent = (click_x - rec.left()) / rec.width().min(0f64);
-        //
-        //         // think unneeded as trigger will take 'single ownership'
-        //         // todo fix second player clone
-        //         let ctx: BarDragEventEventCtx<VolumeBarClickEvent> = BarDragEventEventCtx::new::<MouseUp>(video_player_vdu.clone(), percent);
-        //         let mut ctx = Arc::new(Mutex::new(ctx));
-        //         match vd_callback.trigger(&mut ctx) {
-        //             Ok(_) => {}
-        //             Err(e) => {
-        //                 debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
-        //             }
-        //         }
-        //     }
-        // }));
-
-        // let callback = self.callback_volume_drag_event.clone();
-        // let video_player_vdu = self.video_player.clone();
-        // let callback: EventCtxType<Box<BarDragEventEventCtx<VolumeBarClickEvent>>> = cb;
-        // let vd_callback: EventT<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>> = callback;
+        let time_update = Rc::new(
+            RefCell::new(
+                TimeUpdateClosure::new(self.video_player.clone(), self.callback_progress_event.clone())
+            )
+        );
+        let timeupdate_closure = CallbackClosureWrapper::create_callback(time_update);
+        self.ui_controller.register_global_event_listener_specific("timeupdate", timeupdate_closure);
 
 
         let mouse_up_volume_closure = create_volume_closures::<MouseUp>(self.video_player.clone(), self.callback_volume_drag_event.clone());
@@ -250,22 +134,6 @@ impl CallbackController for HtmlVideoCallbackController {
     }
 }
 
-
-fn callback_handler(ctx: &mut SharedVideoPlayer, callback_ref_opt: Option<&crate::html::html_video::Event>) -> JsResult<()> {
-    if let Some(callback_ref) = callback_ref_opt {
-        let mut callback = callback_ref.borrow_mut();
-        match callback.trigger(ctx) {
-            Ok(_) => { Ok(()) }
-            Err(e) => {
-                debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
-                Err(e)
-            }
-        }
-    } else {
-        debug_console_log!("Callback not found");
-        Err(JsValue::from_str("Callback not found"))
-    }
-}
 
 mod volume_closure {
     use super::*;
@@ -314,6 +182,7 @@ mod volume_closure {
         }
     }
 
+    #[inline]
     pub fn create_volume_closures<T>(video_player: SharedVideoPlayer, callback: Callback) -> Closure
     where
         T: DragAction + 'static,
@@ -333,29 +202,100 @@ mod volume_closure {
 }
 
 mod time_update_closure {
-    use crate::video::event::CallbackEvent;
-    use crate::video::video_callback::CallbackClosureWrapper;
-    use std::cell::RefCell;
-    use std::rc::Rc;
+    use super::*;
 
-    pub(crate) struct TimeUpdate<S> {
-        ctx: S,
-        callback: Rc<RefCell<dyn CallbackEvent<S>>>,
+    type Ctx = SharedVideoPlayer;
+    type Callback = Rc<RefCell<dyn CallbackEvent<SharedVideoPlayer>>>;
+
+    pub(crate) struct TimeUpdateClosure {
+        ctx: Ctx,
+        callback: Callback,
     }
 
-    impl<S> TimeUpdate<S> {
-        pub(crate) fn new(ctx: S, callback: Rc<RefCell<dyn CallbackEvent<S>>>) -> Self {
+    impl TimeUpdateClosure {
+        pub(crate) fn new(ctx: Ctx, callback: Callback) -> Self {
             Self { ctx, callback }
         }
     }
 
-    impl<S> CallbackClosureWrapper<web_sys::Event> for TimeUpdate<S>
-    where
-        S: 'static,
-    {
+    impl CallbackClosureWrapper<web_sys::Event> for TimeUpdateClosure {
         fn closure(&mut self, _: web_sys::Event) {
             let mut callback = self.callback.borrow_mut();
             let _ = callback.trigger(&mut self.ctx);
+        }
+    }
+}
+
+mod control_closure {
+    use super::*;
+
+    type Ctx = SharedVideoPlayer;
+    type Callback = Rc<RefCell<dyn CallbackEvent<SharedVideoPlayer>>>;
+
+    pub(crate) struct ControlClosure {
+        ctx: Ctx,
+        control_callbacks: HashMap<String, Callback>,
+    }
+
+    impl ControlClosure {
+        pub(crate) fn new(ctx: Ctx, control_callbacks: HashMap<String, Callback>) -> Self {
+            Self {
+                ctx,
+                control_callbacks,
+            }
+        }
+    }
+
+    impl CallbackClosureWrapper<web_sys::Event> for ControlClosure {
+        fn closure(&mut self, event: web_sys::Event) {
+            let target = event.current_target()
+                .expect("Failed to get target for control callback");
+
+            if let Some(element) = target.dyn_ref::<Element>() {
+                let id = element.id();
+                if let Some(callback_ref) = self.control_callbacks.get(&id) {
+                    let mut callback = callback_ref.borrow_mut();
+                    let _ = callback.trigger(&mut self.ctx);
+                }
+            }
+        }
+    }
+}
+
+mod keyboard_closure {
+    use super::*;
+
+    type Ctx = SharedVideoPlayer;
+    type Callback = Rc<RefCell<dyn CallbackEvent<SharedVideoPlayer>>>;
+
+    pub(crate) struct KeyboardClosure {
+        ctx: Ctx,
+        keyboard_callbacks: HashMap<String, Callback>,
+    }
+
+
+    impl KeyboardClosure {
+        pub(crate) fn new(ctx: Ctx, keyboard_callbacks: HashMap<String, Callback>) -> Self {
+            Self {
+                ctx,
+                keyboard_callbacks,
+            }
+        }
+    }
+
+    impl CallbackClosureWrapper<web_sys::KeyboardEvent> for KeyboardClosure {
+        fn closure(&mut self, event: web_sys::KeyboardEvent) {
+            let key = event.key();
+            #[cfg(not(debug_assertions))]
+            {
+                if !d.contains_key(&key) {
+                    event.prevent_default();
+                }
+            }
+            if let Some(callback_ref) = self.keyboard_callbacks.get(&key) {
+                let mut callback = callback_ref.borrow_mut();
+                let _ = callback.trigger(&mut self.ctx);
+            }
         }
     }
 }
