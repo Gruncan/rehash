@@ -1,7 +1,7 @@
 use crate::event::CallbackController;
 use crate::get_element_as;
 use crate::prelude::*;
-use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, FastForwardEvent, FullScreenEvent, MuteUnmuteEvent, PlayPauseEvent, ProgressBarChangeEvent, ProgressBarClickEvent, ProgressBarClickEventCtx, ProgressBarClickEventCtxType, RewindEvent, SettingsEvent};
+use crate::video::video_callback_event::{CallbackEvent, CallbackEventInit, FastForwardEvent, FullScreenEvent, MuteUnmuteEvent, PlayPauseEvent, ProgressBarChangeEvent, ProgressBarClickEvent, ProgressBarClickEventCtx, ProgressBarClickEventCtxType, RewindEvent, SettingsEvent, VolumeBarClickEvent, VolumeBarClickEventCtx, VolumeBarClickEventCtxType};
 use crate::video::video_internal::{VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController, VideoUIRegister};
 use crate::{callback_event, console_log, debug_console_log, JsResult};
@@ -119,6 +119,10 @@ impl VideoInternal for HtmlVideoPlayerInternal {
         let state: InternalVideoReadiness = self.video_element.ready_state().into();
         state >= InternalVideoReadiness::CurrentData
     }
+
+    fn set_volume(&self, volume: f64) {
+        self.video_element.set_volume(volume)
+    }
 }
 
 impl Clone for HtmlVideoPlayerInternal {
@@ -151,6 +155,8 @@ pub(crate) struct HtmlVideoUIController {
     fullscreen_icon: SvgElement,
     fast_forward_icon: SvgElement,
     rewind_icon: SvgElement,
+    volume_fill: HtmlDivElement,
+
 }
 
 
@@ -186,7 +192,12 @@ impl VideoUIController<HtmlVideoPlayerInternal> for HtmlVideoUIController {
             .expect("Failed to set style for progress fill");
         self.progress_left.style().set_property("left", format!("{}%", percent).as_str())
             .expect("Failed to set style for progress left");
+    }
 
+    fn update_volume(&self, volume: f64) {
+        debug_console_log!("Volume width {}", volume);
+        self.volume_fill.style().set_property("width", format!("{}%", volume * 100f64).as_str())
+            .expect("Failed to set volume");
     }
 }
 
@@ -248,6 +259,8 @@ impl HtmlVideoUIController {
     const FAST_FORWARD_ICON_ID: &'static str = "fast-forward-icon";
     const REWIND_ICON_ID: &'static str = "rewind-icon";
 
+    const VOLUME_FILL_ID: &'static str = "volume-fill";
+
     const VIDEO_ID: &'static str = "video-player";
 
 
@@ -270,6 +283,8 @@ impl HtmlVideoUIController {
         let fast_forward_icon = get_element_as!(&document, Self::FAST_FORWARD_ICON_ID, SvgElement);
         let rewind_icon = get_element_as!(&document, Self::REWIND_ICON_ID, SvgElement);
 
+        let volume_fill = get_element_as!(&document, Self::VOLUME_FILL_ID, HtmlDivElement);
+
         let video_element = get_element_as!(&document, Self::VIDEO_ID, HtmlVideoElement);
 
 
@@ -288,6 +303,7 @@ impl HtmlVideoUIController {
             fullscreen_icon,
             fast_forward_icon,
             rewind_icon,
+            volume_fill
         }
     }
 
@@ -302,6 +318,7 @@ pub(crate) struct HtmlVideoCallbackController {
     callback_control_events: HashMap<String, Event>,
     callback_progress_event: Event,
     callback_progress_click_event: EventT<ProgressBarClickEventCtxType>,
+    callback_volume_click_event: EventT<VolumeBarClickEventCtxType>
 }
 
 
@@ -313,6 +330,7 @@ impl HtmlVideoCallbackController {
     const PROGRESS_BAR_ID: &'static str = "progress-bar";
     const FAST_FORWARD_ID: &'static str = "fast-forward";
     const REWIND_ID: &'static str = "rewind";
+    const VOLUME_ID: &'static str = "volume-slider";
 
     pub fn new(video_player: SharedVideoPlayer, ui_controller: HtmlVideoUIController) -> Self {
         let play_pause_event: Event = callback_event!(PlayPauseEvent<HtmlVideoPlayerInternal>);
@@ -321,6 +339,7 @@ impl HtmlVideoCallbackController {
         let settings_event: Event = callback_event!(SettingsEvent);
         let fullscreen_event: Event = callback_event!(FullScreenEvent);
         let progress_click_event: EventT<ProgressBarClickEventCtxType> = callback_event!(ProgressBarClickEvent);
+        let volume_click_event: EventT<VolumeBarClickEventCtxType> = callback_event!(VolumeBarClickEvent);
 
         let fast_forward_event: Event = callback_event!(FastForwardEvent);
         let rewind_event: Event = callback_event!(RewindEvent);
@@ -348,7 +367,8 @@ impl HtmlVideoCallbackController {
             callback_keyboard_events: keyboard_events,
             callback_control_events: control_events,
             callback_progress_event: progress_event,
-            callback_progress_click_event: progress_click_event
+            callback_progress_click_event: progress_click_event,
+            callback_volume_click_event: volume_click_event
         }
     }
 }
@@ -421,6 +441,30 @@ impl CallbackController for HtmlVideoCallbackController {
         }));
 
         self.ui_controller.register_element_event_listener_specific("click", Self::PROGRESS_BAR_ID, progress_bar_click_closure);
+
+        let video_player_v = self.video_player.clone();
+        let v = self.callback_volume_click_event.clone();
+        let volume_bar_click_closure: Box<Closure<dyn FnMut(web_sys::MouseEvent)>> = Box::new(Closure::new(move |event: web_sys::MouseEvent| {
+            let target = event.target().unwrap();
+            if let Some(element) = target.dyn_ref::<HtmlElement>() {
+                let rec = element.get_bounding_client_rect();
+                let click_x = event.client_x() as f64;
+                let percent = (click_x - rec.left()) / rec.width();
+
+                // think unneeded as trigger will take 'single ownership'
+                // todo fix second player clone
+                let mut ctx = Arc::new(Mutex::new(VolumeBarClickEventCtx { video_player: video_player_v.clone(), volume_to_set: percent }));
+                let mut callback = v.borrow_mut();
+                match callback.trigger(&mut ctx) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
+                    }
+                }
+            }
+        }));
+
+        self.ui_controller.register_element_event_listener_specific("click", Self::VOLUME_ID, volume_bar_click_closure);
     }
 }
 

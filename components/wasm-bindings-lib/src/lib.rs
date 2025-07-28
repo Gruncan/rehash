@@ -54,6 +54,14 @@ pub fn log_to_tauri(msg: &str) {
     let _ = tauri_invoke("wasm_log", JsValue::from(args));
 }
 
+#[cfg(feature = "tauri")]
+pub fn error_to_tauri(msg: &str) {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"message".into(), &msg.into()).unwrap();
+    // TODO use the return value
+    let _ = tauri_invoke("wasm_error", JsValue::from(args));
+}
+
 
 #[macro_export]
 macro_rules! console_log {
@@ -62,7 +70,7 @@ macro_rules! console_log {
 
 #[macro_export]
 macro_rules! error_log {
-    ($($t:tt)*) => (error(&format_args!($($t)*).to_string()))
+    ($($t:tt)*) => (error_to_tauri(&format_args!($($t)*).to_string()))
 }
 
 #[macro_export]

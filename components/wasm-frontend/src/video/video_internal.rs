@@ -27,6 +27,8 @@ pub trait VideoInternal: Clone {
 
     fn ready(&self) -> bool;
 
+    fn set_volume(&self, volume: f64);
+
 }
 
 

@@ -20,6 +20,11 @@ fn wasm_log(message: String) {
 }
 
 #[tauri::command]
+fn wasm_error(message: String) {
+    eprintln!("[WASM] {}", message);
+}
+
+#[tauri::command]
 async fn get_video_bytes(path: String) -> Result<Vec<u8>, String> {
     println!("Reading video file: {}", path);
 
@@ -76,7 +81,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![wasm_log, get_video_bytes, get_desktop_build])
+        .invoke_handler(tauri::generate_handler![wasm_log, get_video_bytes, get_desktop_build, wasm_error])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

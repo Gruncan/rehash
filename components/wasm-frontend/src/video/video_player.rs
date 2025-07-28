@@ -46,6 +46,8 @@ pub trait VideoPlayerState {
     fn set_video_time(&self);
 
     fn set_video_progress(&self, progress: f64);
+
+    fn set_volume(&self, volume: f64);
 }
 
 impl<I, S> VideoPlayerState for VideoPlayer<I, S>
@@ -95,6 +97,11 @@ where
 
     fn set_video_progress(&self, progress: f64) {
         self.internal.set_video_progress(progress);
+    }
+
+    fn set_volume(&self, volume: f64) {
+        self.internal.set_volume(volume);
+        self.video_controller.update_volume(volume);
     }
 }
 
@@ -266,6 +273,8 @@ where
     fn swap_unmute_button(&self);
 
     fn update_progress(&self, progress: f64, duration: f64);
+
+    fn update_volume(&self, volume: f64);
 }
 
 pub trait VideoUIRegister {

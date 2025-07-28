@@ -281,6 +281,36 @@ impl CallbackEvent<ProgressBarClickEventCtxType> for ProgressBarClickEvent {
     }
 }
 
+pub(crate) type VolumeBarClickEventCtxType = Arc<Mutex<VolumeBarClickEventCtx>>;
+
+pub(crate) struct VolumeBarClickEventCtx {
+    pub(crate) video_player: SharedVideoPlayer,
+    pub(crate) volume_to_set: f64,
+}
+
+#[derive(Debug)]
+pub(crate) struct VolumeBarClickEvent {}
+
+impl CallbackEventInit for VolumeBarClickEvent {
+    fn new() -> Self {
+        Self {}
+    }
+}
+
+
+impl CallbackEvent<VolumeBarClickEventCtxType> for VolumeBarClickEvent {
+    fn trigger(&mut self, ctx: &mut VolumeBarClickEventCtxType) -> JsResult<()> {
+        debug_console_log!("Triggering volume bar click event");
+        let progress_mutex = ctx.lock().unwrap();
+        let percent = progress_mutex.volume_to_set;
+        debug_console_log!("Volume Percent: {}%", percent);
+        let video_mutex = progress_mutex.video_player.lock().unwrap();
+        video_mutex.set_volume(percent);
+
+        Ok(())
+    }
+}
+
 
 
 
