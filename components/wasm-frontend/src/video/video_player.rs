@@ -1,17 +1,14 @@
 use crate::prelude::*;
-use crate::prelude::*;
+use crate::video::event::EventCtxType;
 use crate::video::video_internal::VideoInternal;
+pub(crate) use crate::video::video_ui::VideoUIController;
 use crate::{debug_console_log, JsResult};
 use std::any::Any;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
-use wasm_bindgen::closure::{Closure, WasmClosure};
 use wasm_bindgen::JsValue;
 
-pub type SharedVideoPlayer = Arc<Mutex<Box<dyn VideoPlayerState>>>;
-
 pub type VideoPlayerResult<I, S: VideoPlayerTypeState> = Result<VideoPlayer<I, S>, VideoPlayer<I, S::FallbackState>>;
-
+pub(crate) type SharedVideoPlayer = EventCtxType<Box<dyn VideoPlayerState>>;
 
 pub struct VideoPlayer<I, S>
 where
@@ -220,7 +217,7 @@ where
 }
 
 
-pub trait VideoPlayerTypeState {
+pub(crate) trait VideoPlayerTypeState {
     type FallbackState;
 }
 
@@ -259,30 +256,3 @@ impl VideoPlayerTypeState for Finished {
 }
 
 
-pub trait VideoUIController<I>
-where
-    I: VideoInternal,
-{
-
-    fn swap_play_button(&self);
-
-    fn swap_pause_button(&self);
-
-    fn swap_mute_button(&self);
-
-    fn swap_unmute_button(&self);
-
-    fn update_progress(&self, progress: f64, duration: f64);
-
-    fn update_volume(&self, volume: f64);
-}
-
-pub trait VideoUIRegister {
-    fn register_global_event_listener<T: ?Sized + WasmClosure>(&self, closure: Box<Closure<T>>);
-
-    fn register_element_event_listener<T: ?Sized + WasmClosure>(&self, ids: Vec<String>, closure: Box<Closure<T>>);
-
-    fn register_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>);
-
-    fn register_element_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, id: &str, closure: Box<Closure<T>>);
-}

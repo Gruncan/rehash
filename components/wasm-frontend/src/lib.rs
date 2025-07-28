@@ -1,17 +1,18 @@
 
 mod prelude;
 mod video;
-mod event;
-mod backend_callback_event;
+mod html;
+mod tauri;
 
-use crate::backend_callback_event::FileOpenCallbackController;
-use crate::event::CallbackController;
+use crate::html::html_callback::HtmlVideoCallbackController;
 use crate::prelude::*;
-use crate::video::html_video::{HtmlVideoCallbackController, HtmlVideoPlayerInternal, HtmlVideoUIController};
+use crate::tauri::tauri_callback::FileOpenCallbackController;
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController};
+use html::html_video::{HtmlVideoPlayerInternal, HtmlVideoUIController};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
-use video::video_callback_event::*;
+use video::event::CallbackController;
+use video::video_callback::*;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
