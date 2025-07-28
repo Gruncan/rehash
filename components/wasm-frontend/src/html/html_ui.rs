@@ -8,6 +8,7 @@ use web_sys::{Document, HtmlDivElement, HtmlSpanElement, HtmlVideoElement, SvgEl
 
 pub use crate::prelude::*;
 
+#[derive(Debug)]
 pub(crate) struct HtmlVideoUIController {
     document: Document,
     video: HtmlVideoElement,

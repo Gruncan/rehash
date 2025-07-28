@@ -52,6 +52,7 @@ mod file_open_closure {
     type Ctx = FileOpenEventCtxType;
     type Callback = Rc<RefCell<dyn CallbackEvent<FileOpenEventCtxType>>>;
 
+    #[derive(Debug)]
     pub(crate) struct FileOpenClosure {
         ctx: Ctx,
         callback: Callback,

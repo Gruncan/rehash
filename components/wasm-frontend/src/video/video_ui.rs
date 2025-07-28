@@ -1,7 +1,8 @@
 use crate::video::video_internal::VideoInternal;
+use std::fmt::Debug;
 use wasm_bindgen::closure::{Closure, WasmClosure};
 
-pub(crate) trait VideoUIController<I>
+pub(crate) trait VideoUIController<I>: Debug
 where
     I: VideoInternal,
 {

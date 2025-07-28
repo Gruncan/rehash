@@ -3,7 +3,7 @@ use crate::video::video_internal::VideoInternal;
 use crate::video::video_player::{get_state_owned, Finished, Paused, Playing, Ready, SharedVideoPlayer, Uninitialized, VideoPlayer, VideoPlayerResult, VideoPlayerState, VideoPlayerTypeState};
 use crate::JsResult;
 use std::any::TypeId;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use wasm_bindgen::JsValue;
@@ -14,9 +14,10 @@ pub use crate::prelude::*;
 
 pub(crate) mod play_pause_event {
     use super::*;
+    use crate::video::video_player;
 
 
-    #[derive(Clone)]
+    #[derive(Debug, Clone)]
     pub(crate) struct PlayPauseEvent<I>
     where
         I: VideoInternal + 'static,
@@ -26,18 +27,9 @@ pub(crate) mod play_pause_event {
     }
 
 
-    impl<I> Debug for PlayPauseEvent<I>
-    where
-        I: 'static + VideoInternal,
-    {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            todo!()
-        }
-    }
-
     impl<I> CallbackEvent<SharedVideoPlayer> for PlayPauseEvent<I>
     where
-        I: VideoInternal + 'static,
+        I: VideoInternal + 'static + Debug,
     {
         fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
             let mutex = ctx.lock().unwrap();
@@ -87,7 +79,7 @@ pub(crate) mod play_pause_event {
 
     impl<I> PlayPauseEvent<I>
     where
-        I: VideoInternal + 'static,
+        I: VideoInternal + 'static + std::fmt::Debug,
     {
         pub(crate) fn new() -> Self {
             Self {
@@ -98,8 +90,9 @@ pub(crate) mod play_pause_event {
 
         fn get_video_player_state_return<S>(&mut self, video_result: VideoPlayerResult<I, S>) -> Box<dyn VideoPlayerState>
         where
-            S: VideoPlayerTypeState + 'static,
+            S: VideoPlayerTypeState + 'static + Debug,
             <S as VideoPlayerTypeState>::FallbackState: VideoPlayerTypeState,
+            <S as video_player::VideoPlayerTypeState>::FallbackState: std::fmt::Debug
         {
             match video_result {
                 Ok(v) => {
@@ -319,6 +312,7 @@ pub(crate) mod drag_events {
     impl BarDraggable for ProgressBarClickEvent {}
 
 
+    #[derive(Debug)]
     pub(crate) struct BarDragEventEventCtx<T>
     where
         T: BarDraggable + 'static,
@@ -348,13 +342,15 @@ pub(crate) mod drag_events {
 
 
     #[derive(Debug, Clone)]
-    pub(crate) struct BarDragEvent {}
+    pub(crate) struct BarDragEvent {
+        is_dragging: bool,
+    }
 
 
     impl CallbackEvent<EventCtxType<BarDragEventEventCtx<ProgressBarClickEvent>>> for BarDragEvent
     {
         fn trigger(&mut self, ctx: &mut EventCtxType<BarDragEventEventCtx<ProgressBarClickEvent>>) -> JsResult<()> {
-            // let mutex = ctx.lock().unwrap();
+            let mutex = ctx.lock().unwrap();
             debug_console_log!("Triggering progress bar drag event");
 
             Ok(())
@@ -373,16 +369,22 @@ pub(crate) mod drag_events {
 
             match mutex.action_id {
                 id if id == TypeId::of::<MouseDown>() => {
-                    debug_console_log!("Triggering progress volume mouse down");
-                    // let percent = mutex.percent;
-                    // debug_console_log!("Volume Percent: {}%", percent);
-                    // let video_mutex = mutex.video_player.lock().unwrap();
-                    // video_mutex.set_volume(percent);
+                    let percent = mutex.percent;
+                    debug_console_log!("Mouse down volume Percent: {}%", percent);
+                    let video_mutex = mutex.video_player.lock().unwrap();
+                    video_mutex.set_volume(percent);
+                    self.is_dragging = true;
                 }
                 id if id == TypeId::of::<MouseUp>() => {
                     debug_console_log!("Triggering progress volume mouse up");
+                    self.is_dragging = false;
                 }
-                id if id == TypeId::of::<MouseMove>() => {}
+                id if id == TypeId::of::<MouseMove>() => {
+                    let percent = mutex.percent;
+                    debug_console_log!("Mouse move volume Percent: {}%", percent);
+                    let video_mutex = mutex.video_player.lock().unwrap();
+                    video_mutex.set_volume(percent);
+                }
                 _ => {
                     return Err(JsValue::from_str("Callback play event has incorrect type"))
                 }
@@ -398,7 +400,7 @@ pub(crate) mod drag_events {
 
     impl BarDragEvent {
         pub fn new() -> Self {
-            Self {}
+            Self { is_dragging: false }
         }
     }
 }

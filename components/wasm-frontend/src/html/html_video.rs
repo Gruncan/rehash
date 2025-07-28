@@ -1,9 +1,9 @@
+use crate::console_log;
 pub(crate) use crate::html::html_ui::HtmlVideoUIController;
 use crate::prelude::*;
 use crate::video::video_callback::*;
 use crate::video::video_internal::{VideoInternal, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoPlayerState};
-use crate::console_log;
 use std::cell::RefCell;
 use std::cmp::PartialOrd;
 use std::rc::Rc;
@@ -15,6 +15,7 @@ pub(crate) type HtmlVideoPlayer<S> = VideoPlayer<HtmlVideoPlayerInternal, S>;
 pub(crate) type Event = Rc<RefCell<dyn CallbackEvent<SharedVideoPlayer>>>;
 pub(crate) type EventT<T> = Rc<RefCell<dyn CallbackEvent<T>>>;
 
+#[derive(Debug)]
 pub(crate) struct HtmlVideoPlayerInternal {
     video_element: HtmlVideoElement,
 }

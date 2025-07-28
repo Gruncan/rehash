@@ -4,12 +4,14 @@ use crate::video::video_internal::VideoInternal;
 pub(crate) use crate::video::video_ui::VideoUIController;
 use crate::{debug_console_log, JsResult};
 use std::any::Any;
+use std::fmt::Debug;
 use std::rc::Rc;
 use wasm_bindgen::JsValue;
 
 pub type VideoPlayerResult<I, S: VideoPlayerTypeState> = Result<VideoPlayer<I, S>, VideoPlayer<I, S::FallbackState>>;
 pub(crate) type SharedVideoPlayer = EventCtxType<Box<dyn VideoPlayerState>>;
 
+#[derive(Debug)]
 pub struct VideoPlayer<I, S>
 where
     I: VideoInternal,
@@ -23,7 +25,7 @@ where
 
 
 #[allow(dead_code)]
-pub trait VideoPlayerState {
+pub trait VideoPlayerState: Debug {
     fn as_any(&self) -> &dyn Any;
 
     fn as_any_mut(&mut self) -> &mut dyn Any;
@@ -49,8 +51,8 @@ pub trait VideoPlayerState {
 
 impl<I, S> VideoPlayerState for VideoPlayer<I, S>
 where
-    I: VideoInternal + 'static,
-    S: VideoPlayerTypeState + 'static,
+    I: VideoInternal + 'static + Debug,
+    S: VideoPlayerTypeState + 'static + Debug,
 {
     fn as_any(&self) -> &dyn Any {
         self
@@ -222,10 +224,19 @@ pub(crate) trait VideoPlayerTypeState {
     type FallbackState;
 }
 
+#[derive(Debug)]
 pub enum Uninitialized {}
+
+#[derive(Debug)]
 pub enum Ready {}
+
+#[derive(Debug)]
 pub enum Paused {}
+
+#[derive(Debug)]
 pub enum Playing {}
+
+#[derive(Debug)]
 pub enum Finished {}
 
 

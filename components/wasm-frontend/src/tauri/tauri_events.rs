@@ -17,7 +17,7 @@ pub(crate) mod file_open_event {
     #[derive(Debug, Clone)]
     pub(crate) struct FileOpenEvent {}
 
-    #[derive(Clone)]
+    #[derive(Debug, Clone)]
     pub(crate) struct FileOpenEventCtx {
         pub(crate) video_element: HtmlVideoElement,
         pub(crate) video_path: Option<String>,
