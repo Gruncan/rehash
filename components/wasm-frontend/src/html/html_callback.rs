@@ -140,7 +140,7 @@ mod volume_closure {
 
     type Ctx = EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>;
     type Callback = Rc<RefCell<dyn CallbackEvent<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>>>>;
-    type Closure = Box<wasm_bindgen::closure::Closure<dyn FnMut(web_sys::Event)>>;
+    type Closure<S> = Box<wasm_bindgen::closure::Closure<dyn FnMut(S)>>;
 
     pub(crate) struct VolumeBarDragClosure {
         ctx: Ctx,
@@ -179,7 +179,7 @@ mod volume_closure {
     }
 
     #[inline]
-    pub fn create_volume_closures<T>(video_player: SharedVideoPlayer, callback: Callback) -> Closure
+    pub fn create_volume_closures<T>(video_player: SharedVideoPlayer, callback: Callback) -> Closure<web_sys::MouseEvent>
     where
         T: DragAction + 'static,
     {
