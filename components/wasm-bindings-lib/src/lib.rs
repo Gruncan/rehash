@@ -1,4 +1,4 @@
-use js_sys::Promise;
+use js_sys::{Error, Promise, Reflect};
 use std::panic;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
@@ -121,7 +121,31 @@ macro_rules! debug_console_log {
 
 pub fn set_panic_hook() {
     panic::set_hook(Box::new(move |info| {
-        error_log!("Rust panic: {}", info);
+        let msg = match info.payload().downcast_ref::<&str>() {
+            Some(s) => *s,
+            None => match info.payload().downcast_ref::<String>() {
+                Some(s) => &s[..],
+                None => "Unknown panic message",
+            },
+        };
+        let location = if let Some(loc) = info.location() {
+            format!("{}:{}", loc.file(), loc.line())
+        } else {
+            "unknown location".to_string()
+        };
+
+        let error = Error::new("panic");
+        let stack = Reflect::get(&error, &JsValue::from_str("stack"))
+            .ok()
+            .and_then(|v| v.as_string())
+            .unwrap_or_else(|| "No stack trace available".to_string());
+
+        error_log!(
+            "Rust panic!\n\tMessage: \t{}\nLocation: \t{}\nStack trace:\n\t{}",
+            msg,
+            location,
+            stack
+        );
     }))
 }
 
