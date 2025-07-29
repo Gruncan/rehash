@@ -19,6 +19,8 @@ pub(crate) trait CallbackEvent<T>: Debug
     fn trigger(&mut self, ctx: &mut T) -> JsResult<()>;
 
     fn clone_box(&self) -> Box<dyn CallbackEvent<T>>;
+
+    fn set_ctx(&mut self, percent: f64) {}
 }
 
 impl<T> Clone for Box<dyn CallbackEvent<T>> {

@@ -47,6 +47,8 @@ pub trait VideoPlayerState: Debug {
     fn set_video_progress(&self, progress: f64);
 
     fn set_volume(&self, volume: f64);
+
+    fn clone_box(&self) -> Box<dyn VideoPlayerState>;
 }
 
 impl<I, S> VideoPlayerState for VideoPlayer<I, S>
@@ -102,6 +104,10 @@ where
     fn set_volume(&self, volume: f64) {
         self.internal.set_volume(volume);
         self.video_controller.update_volume(volume);
+    }
+
+    fn clone_box(&self) -> Box<dyn VideoPlayerState> {
+        Box::new(self.clone())
     }
 }
 

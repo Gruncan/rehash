@@ -14,7 +14,6 @@ pub use crate::prelude::*;
 
 pub(crate) mod play_pause_event {
     use super::*;
-    use crate::video::video_player;
 
 
     #[derive(Debug, Clone)]
@@ -79,7 +78,7 @@ pub(crate) mod play_pause_event {
 
     impl<I> PlayPauseEvent<I>
     where
-        I: VideoInternal + 'static + std::fmt::Debug,
+        I: VideoInternal + 'static + Debug,
     {
         pub(crate) fn new() -> Self {
             Self {
@@ -92,7 +91,7 @@ pub(crate) mod play_pause_event {
         where
             S: VideoPlayerTypeState + 'static + Debug,
             <S as VideoPlayerTypeState>::FallbackState: VideoPlayerTypeState,
-            <S as video_player::VideoPlayerTypeState>::FallbackState: std::fmt::Debug
+            <S as VideoPlayerTypeState>::FallbackState: Debug
         {
             match video_result {
                 Ok(v) => {
@@ -288,7 +287,9 @@ pub(crate) mod fast_forward_event {
 
 pub(crate) mod drag_events {
     use super::*;
-    use crate::video::event::EventCtxType;
+    use crate::video::event::CallbackEventType;
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
     #[derive(Debug, Clone)]
     pub(crate) struct ProgressBarClickEvent {}
@@ -317,7 +318,7 @@ pub(crate) mod drag_events {
     where
         T: BarDraggable + 'static,
     {
-        video_player: SharedVideoPlayer,
+        video_player: Rc<RefCell<Box<dyn VideoPlayerState>>>,
         pub(crate) percent: f64,
         marker: PhantomData<T>,
         action_id: TypeId,
@@ -327,7 +328,7 @@ pub(crate) mod drag_events {
     where
         T: BarDraggable + 'static,
     {
-        pub(crate) fn new<A>(video_player: SharedVideoPlayer) -> Self
+        pub(crate) fn new<A>(video_player: Rc<RefCell<Box<dyn VideoPlayerState>>>) -> Self
         where
             A: DragAction + 'static,
         {
@@ -347,31 +348,32 @@ pub(crate) mod drag_events {
     }
 
 
-    impl CallbackEvent<EventCtxType<BarDragEventEventCtx<ProgressBarClickEvent>>> for BarDragEvent
+    impl CallbackEvent<CallbackEventType<BarDragEventEventCtx<ProgressBarClickEvent>>> for BarDragEvent
     {
-        fn trigger(&mut self, ctx: &mut EventCtxType<BarDragEventEventCtx<ProgressBarClickEvent>>) -> JsResult<()> {
-            let mutex = ctx.lock().unwrap();
+        fn trigger(&mut self, ctx: &mut CallbackEventType<BarDragEventEventCtx<ProgressBarClickEvent>>) -> JsResult<()> {
+            // let mutex = ctx.lock().unwrap();
             debug_console_log!("Triggering progress bar drag event");
 
             Ok(())
         }
 
-        fn clone_box(&self) -> Box<dyn CallbackEvent<EventCtxType<BarDragEventEventCtx<ProgressBarClickEvent>>>> {
+        fn clone_box(&self) -> Box<dyn CallbackEvent<CallbackEventType<BarDragEventEventCtx<ProgressBarClickEvent>>>> {
             Box::new(self.clone())
         }
     }
 
-    impl CallbackEvent<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>> for BarDragEvent
+    impl CallbackEvent<BarDragEventEventCtx<VolumeBarClickEvent>> for BarDragEvent
     {
-        fn trigger(&mut self, ctx: &mut EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>) -> JsResult<()> {
-            let mutex = ctx.lock().unwrap();
+        fn trigger(&mut self, ctx: &mut BarDragEventEventCtx<VolumeBarClickEvent>) -> JsResult<()> {
+            debug_console_log!("Trying to acquire mutex for: {:?}", self);
             // debug_console_log!("Triggering volume bar drag event");
+            // let contex = ctx.borrow();
 
-            match mutex.action_id {
+            match ctx.action_id {
                 id if id == TypeId::of::<MouseDown>() => {
-                    let percent = mutex.percent;
+                    let percent = ctx.percent;
                     debug_console_log!("Mouse down volume Percent: {}%", percent);
-                    let video_mutex = mutex.video_player.lock().unwrap();
+                    let video_mutex = ctx.video_player.borrow();
                     video_mutex.set_volume(percent);
                     self.is_dragging = true;
                 }
@@ -380,9 +382,9 @@ pub(crate) mod drag_events {
                     self.is_dragging = false;
                 }
                 id if id == TypeId::of::<MouseMove>() => {
-                    let percent = mutex.percent;
+                    let percent = ctx.percent;
                     debug_console_log!("Mouse move volume Percent: {}%", percent);
-                    let video_mutex = mutex.video_player.lock().unwrap();
+                    let video_mutex = ctx.video_player.borrow();
                     video_mutex.set_volume(percent);
                 }
                 _ => {
@@ -393,7 +395,7 @@ pub(crate) mod drag_events {
             Ok(())
         }
 
-        fn clone_box(&self) -> Box<dyn CallbackEvent<EventCtxType<BarDragEventEventCtx<VolumeBarClickEvent>>>> {
+        fn clone_box(&self) -> Box<dyn CallbackEvent<BarDragEventEventCtx<VolumeBarClickEvent>>> {
             Box::new(self.clone())
         }
     }

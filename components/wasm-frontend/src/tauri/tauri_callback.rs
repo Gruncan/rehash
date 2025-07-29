@@ -33,11 +33,7 @@ impl FileOpenCallbackController {
 
 impl CallbackController for FileOpenCallbackController {
     fn register_events(&self) {
-        let file_open = Rc::new(
-            RefCell::new(
-                FileOpenClosure::new(self.ctx.clone(), self.open_event.clone())
-            )
-        );
+        let file_open = Box::new(FileOpenClosure::new(self.ctx.clone(), self.open_event.clone()));
         let file_open_closure = CallbackClosureWrapper::create_callback(file_open);
 
         tauri_listen("select-video-event", file_open_closure.as_ref().as_ref().unchecked_ref());
