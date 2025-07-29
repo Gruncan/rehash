@@ -1,10 +1,13 @@
+mod video;
+
+use crate::video::{VideoStreamChunk, VideoStreamHandler, VideoStreamMeta};
 use std::fs;
 use tauri::menu::{
     AboutMetadata, Menu, MenuBuilder, MenuItem, MenuItemBuilder, Submenu, SubmenuBuilder,
 };
 use tauri::path::BaseDirectory;
-use tauri::Window;
 use tauri::{Emitter, Manager};
+use tauri::{State, Window};
 use tauri_plugin_dialog::{DialogExt, FileDialogBuilder, FilePath};
 
 pub const DESKTOP_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -40,9 +43,21 @@ async fn get_video_bytes(path: String) -> Result<Vec<u8>, String> {
     }
 }
 
+#[tauri::command]
+async fn create_video_stream(stream_handler: State<'_, VideoStreamHandler>, path: String) -> Result<VideoStreamMeta, String> {
+    stream_handler.create_stream(path, 20).await
+}
+
+#[tauri::command]
+async fn get_chunk(stream_handler: State<'_, VideoStreamHandler>) -> Result<Option<VideoStreamChunk>, String> {
+    stream_handler.read_chunk().await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     println!("Desktop version: {}", DESKTOP_VERSION);
+    let video_stream_handler = VideoStreamHandler::new();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
@@ -81,7 +96,8 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![wasm_log, get_video_bytes, get_desktop_build, wasm_error])
+        .manage(video_stream_handler)
+        .invoke_handler(tauri::generate_handler![wasm_log, get_desktop_build, wasm_error, create_video_stream, get_chunk])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
