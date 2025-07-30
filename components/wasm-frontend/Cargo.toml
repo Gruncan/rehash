@@ -16,7 +16,7 @@ serde-wasm-bindgen = "0.6.5"
 
 [dependencies.web-sys]
 version = "0.3"
-features = ["console", "Document", "Element", "HtmlElement", "HtmlVideoElement", "HtmlInputElement", "HtmlButtonElement", "Window", "FileList", "File", "Url", "Event", "EventTarget", "KeyboardEvent", "MouseEvent", "DomRect", "SvgElement", "CssStyleDeclaration", "HtmlSpanElement", "BlobPropertyBag", "HtmlDivElement", "MediaSource"]
+features = ["console", "Document", "Element", "HtmlElement", "HtmlVideoElement", "HtmlInputElement", "HtmlButtonElement", "Window", "FileList", "File", "Url", "Event", "EventTarget", "KeyboardEvent", "MouseEvent", "DomRect", "SvgElement", "CssStyleDeclaration", "HtmlSpanElement", "BlobPropertyBag", "HtmlDivElement", "MediaSource", "SourceBuffer"]
 
 #[alias]
 #clean-all = "clean && rm -rf pkg"
