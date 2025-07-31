@@ -9,8 +9,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::{JsCast, JsValue};
-use wasm_bindings_lib::tauri_listen;
 use web_sys::HtmlVideoElement;
+
+pub use crate::prelude::*;
 
 #[derive(Clone)]
 pub(crate) struct FileOpenCallbackController {

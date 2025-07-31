@@ -1,3 +1,8 @@
+pub mod logging;
+pub mod errors;
+pub mod wrappers;
+
+use crate::logging::error_to_tauri;
 use js_sys::{Error, Promise, Reflect};
 use std::panic;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -45,78 +50,6 @@ extern "C" {
     
 }
 
-#[cfg(feature = "tauri")]
-pub fn log_to_tauri(msg: &str) {
-    let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"message".into(), &msg.into()).unwrap();
-    // TODO use the return value
-    let _ = tauri_invoke("wasm_log", JsValue::from(args));
-}
-
-#[cfg(feature = "tauri")]
-pub fn error_to_tauri(msg: &str) {
-    let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"message".into(), &msg.into()).unwrap();
-    // TODO use the return value
-    let _ = tauri_invoke("wasm_error", JsValue::from(args));
-}
-
-
-#[cfg(feature = "tauri")]
-#[macro_export]
-macro_rules! console_log {
-    ($($t:tt)*) => {
-        log_to_tauri(&format_args!($($t)*).to_string())
-    }
-}
-
-#[cfg(not(feature = "tauri"))]
-#[macro_export]
-macro_rules! console_log {
-    ($($t:tt)*) => {
-        log(&format_args!($($t)*).to_string())
-    }
-}
-
-#[cfg(feature = "tauri")]
-#[macro_export]
-macro_rules! error_log {
-
-    ($($t:tt)*) => {
-        error_to_tauri(&format_args!($($t)*).to_string())
-    }
-}
-
-#[cfg(not(feature = "tauri"))]
-#[macro_export]
-macro_rules! error_log {
-
-    ($($t:tt)*) => {
-        error(&format_args!($($t)*).to_string())
-    }
-}
-
-#[cfg(feature = "tauri")]
-#[macro_export]
-macro_rules! debug_console_log {
-    ($($t:tt)*) => {
-        #[cfg(debug_assertions)]
-        {
-            log_to_tauri(&format_args!("[DEBUG] {}", format_args!($($t)*)).to_string())
-        }
-    };
-}
-
-#[cfg(not(feature = "tauri"))]
-#[macro_export]
-macro_rules! debug_console_log {
-    ($($t:tt)*) => {
-        #[cfg(debug_assertions)]
-        {
-            log(&format_args!("[DEBUG] {}", format_args!($($t)*)).to_string())
-        }
-    };
-}
 
 
 pub fn set_panic_hook() {

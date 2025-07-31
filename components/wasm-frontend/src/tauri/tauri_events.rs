@@ -1,14 +1,12 @@
-use crate::prelude::*;
 use crate::tauri::tauri_events::file_open_event::FileOpenEventCtx;
 use crate::video::event::CallbackEvent;
-use crate::JsResult;
-use js_sys::Reflect;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use wasm_bindgen_futures::{spawn_local, JsFuture};
-use wasm_bindings_lib::{debug_console_log, tauri_invoke};
 use web_sys::MediaSource;
 use web_sys::{HtmlVideoElement, Url};
+
+pub use crate::prelude::*;
 
 pub(crate) type FileOpenEventCtxType = Arc<Mutex<FileOpenEventCtx>>;
 
@@ -42,7 +40,7 @@ pub(crate) mod file_open_event {
 
 
     impl CallbackEvent<FileOpenEventCtxType> for FileOpenEvent {
-        fn trigger(&mut self, ctx: &mut FileOpenEventCtxType) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut FileOpenEventCtxType) -> RehashResultUnit {
             #[cfg(debug_assertions)]
             {
                 let mutex = ctx.lock().unwrap();
@@ -75,7 +73,7 @@ pub(crate) mod file_open_event {
         }
     }
 
-    async fn start_stream(html_video_element: &HtmlVideoElement, stream_meta: VideoStreamMeta) -> Result<(), JsValue> {
+    async fn start_stream(html_video_element: &HtmlVideoElement, stream_meta: VideoStreamMeta) -> RehashResultUnit {
         let media_source = MediaSource::new()?;
         let url = Url::create_object_url_with_source(&media_source)?;
         debug_console_log!("url: {}", url);
@@ -94,15 +92,14 @@ pub(crate) mod file_open_event {
     }
 
     async fn load_video_blob(video_element: &HtmlVideoElement, file_path: &String) {
-        let args = js_sys::Object::new();
-        Reflect::set(&args, &"path".into(), &file_path.into()).unwrap();
+        let args = into_object!("path" => file_path).unwrap();
 
         debug_console_log!("{:?}", args);
         match JsFuture::from(tauri_invoke("create_video_stream", args.into())).await {
             Ok(result) => {
                 let object: VideoStreamMeta = serde_wasm_bindgen::from_value(result).unwrap();
                 debug_console_log!("create_video_stream returned {:?}", object);
-                start_stream(video_element, object).await.expect("Failed to start stream");
+                start_stream(video_element, object).await.unwrap();
 
             },
             Err(e) => {
@@ -130,7 +127,7 @@ pub(crate) mod source_open_event {
     pub struct SourceOpenEvent {}
 
     impl CallbackEvent<SourceEventCtxType> for SourceOpenEvent {
-        fn trigger(&mut self, ctx: &mut SourceEventCtxType) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SourceEventCtxType) -> RehashResultUnit {
             let ctx = ctx.clone();
             spawn_local(async move {
                 match JsFuture::from(tauri_invoke("get_chunk", JsValue::NULL)).await {

@@ -6,7 +6,6 @@ use crate::{debug_console_log, JsResult};
 use std::any::Any;
 use std::fmt::Debug;
 use std::rc::Rc;
-use wasm_bindgen::JsValue;
 
 pub type VideoPlayerResult<I, S: VideoPlayerTypeState> = Result<VideoPlayer<I, S>, VideoPlayer<I, S::FallbackState>>;
 pub(crate) type SharedVideoPlayer = EventCtxType<Box<dyn VideoPlayerState>>;
@@ -116,7 +115,7 @@ pub fn get_state_owned<T: 'static + Clone>(value: &Box<dyn VideoPlayerState>) ->
     if let Some(state_ref) = value.as_any().downcast_ref::<T>() {
         Ok(state_ref.clone()) // TODO is cloning fine?
     } else {
-        Err(JsValue::from_str("Invalid downcasting"))
+        Err("Invalid downcasting".into())
     }
 }
 

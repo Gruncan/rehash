@@ -1,9 +1,8 @@
-use crate::JsResult;
+use rehash_utils::errors::RehashResultUnit;
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
-
 
 pub(crate) type CallbackEventType<T> = Rc<RefCell<T>>;
 pub(crate) type EventCtxType<T> = Arc<Mutex<T>>;
@@ -16,7 +15,7 @@ pub(crate) trait CallbackController {
 
 pub(crate) trait CallbackEvent<T>: Debug
 {
-    fn trigger(&mut self, ctx: &mut T) -> JsResult<()>;
+    fn trigger(&mut self, ctx: &mut T) -> RehashResultUnit;
 
     fn clone_box(&self) -> Box<dyn CallbackEvent<T>>;
 

@@ -1,13 +1,10 @@
 use crate::video::event::CallbackEvent;
 use crate::video::video_internal::VideoInternal;
 use crate::video::video_player::{get_state_owned, Finished, Paused, Playing, Ready, SharedVideoPlayer, Uninitialized, VideoPlayer, VideoPlayerResult, VideoPlayerState, VideoPlayerTypeState};
-use crate::JsResult;
 use std::any::TypeId;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::Deref;
-use wasm_bindgen::JsValue;
-use wasm_bindings_lib::debug_console_log;
 
 pub use crate::prelude::*;
 
@@ -30,7 +27,7 @@ pub(crate) mod play_pause_event {
     where
         I: VideoInternal + 'static + Debug,
     {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             let mutex = ctx.lock().unwrap();
             let mut cell = mutex;
 
@@ -62,7 +59,7 @@ pub(crate) mod play_pause_event {
                     standard = self.get_video_player_state_return(video_finished.restart());
                 }
                 _ => {
-                    return Err(JsValue::from_str("Callback play event has incorrect type"))
+                    return Err("Callback play event has incorrect type".into())
                 }
             }
 
@@ -120,7 +117,7 @@ pub(crate) mod mute_unmute_event {
 
 
     impl CallbackEvent<SharedVideoPlayer> for MuteUnmuteEvent {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             let mutex = ctx.lock().unwrap();
             let video_player_state = mutex.deref();
 
@@ -162,7 +159,7 @@ pub(crate) mod progress_bar_change_event {
 
 
     impl CallbackEvent<SharedVideoPlayer> for ProgressBarChangeEvent {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             let mutex = ctx.lock().unwrap();
             let cell = mutex.deref();
 
@@ -191,7 +188,7 @@ pub(crate) mod settings_event {
 
     impl CallbackEvent<SharedVideoPlayer> for SettingsEvent
     {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             debug_console_log!("Triggering settings");
             Ok(())
         }
@@ -216,7 +213,7 @@ pub(crate) mod fullscreen_event {
 
     impl CallbackEvent<SharedVideoPlayer> for FullScreenEvent
     {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             debug_console_log!("Triggering fullscreen");
             Ok(())
         }
@@ -242,7 +239,7 @@ pub(crate) mod rewind_event {
 
     impl CallbackEvent<SharedVideoPlayer> for RewindEvent
     {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             let mutex = ctx.lock().unwrap();
             mutex.rewind();
             Ok(())
@@ -267,7 +264,7 @@ pub(crate) mod fast_forward_event {
     pub(crate) struct FastForwardEvent {}
 
     impl CallbackEvent<SharedVideoPlayer> for FastForwardEvent {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             let mutex = ctx.lock().unwrap();
             mutex.fast_forward();
             Ok(())
@@ -349,7 +346,7 @@ pub(crate) mod drag_events {
 
     impl CallbackEvent<BarDragEventCtx<ProgressBarClickEvent>> for BarDragEvent
     {
-        fn trigger(&mut self, ctx: &mut BarDragEventCtx<ProgressBarClickEvent>) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut BarDragEventCtx<ProgressBarClickEvent>) -> RehashResultUnit {
             debug_console_log!("Triggering progress bar drag event");
             debug_console_log!("Percent: {}", ctx.percent);
 
@@ -363,7 +360,7 @@ pub(crate) mod drag_events {
 
     impl CallbackEvent<BarDragEventCtx<VolumeBarClickEvent>> for BarDragEvent
     {
-        fn trigger(&mut self, ctx: &mut BarDragEventCtx<VolumeBarClickEvent>) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut BarDragEventCtx<VolumeBarClickEvent>) -> RehashResultUnit {
             debug_console_log!("Trying to acquire mutex for: {:?}", self);
             // debug_console_log!("Triggering volume bar drag event");
             // let contex = ctx.borrow();
@@ -387,7 +384,7 @@ pub(crate) mod drag_events {
                     video_mutex.set_volume(percent);
                 }
                 _ => {
-                    return Err(JsValue::from_str("Callback play event has incorrect type"))
+                    return Err("Callback play event has incorrect type".into())
                 }
             }
 

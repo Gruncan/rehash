@@ -3,7 +3,6 @@ use crate::html::html_video::HtmlVideoPlayerInternal;
 use crate::video::video_ui::{VideoUIController, VideoUIRegister};
 use wasm_bindgen::closure::{Closure, WasmClosure};
 use wasm_bindgen::JsCast;
-use wasm_bindings_lib::debug_console_log;
 use web_sys::{Document, HtmlDivElement, HtmlSpanElement, HtmlVideoElement, SvgElement};
 
 pub use crate::prelude::*;

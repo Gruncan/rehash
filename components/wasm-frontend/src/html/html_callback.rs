@@ -181,7 +181,7 @@ mod volume_closure {
                 match self.callback.trigger(&mut self.ctx) {
                     Ok(_) => {}
                     Err(e) => {
-                        debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
+                        debug_console_log!("Tried to go into an unusable state: {}", e);
                     }
                 }
             }
@@ -236,7 +236,7 @@ mod progress_closure {
                 match self.callback.trigger(&mut self.ctx) {
                     Ok(_) => {}
                     Err(e) => {
-                        debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
+                        debug_console_log!("Tried to go into an unusable state: {}", e);
                     }
                 }
             }
