@@ -2,7 +2,7 @@ use crate::tauri::tauri_events::file_open_event::FileOpenEventCtx;
 use crate::video::event::CallbackEvent;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
-use wasm_bindgen_futures::{spawn_local, JsFuture};
+use wasm_bindgen_futures::spawn_local;
 use web_sys::MediaSource;
 use web_sys::{HtmlVideoElement, Url};
 
@@ -11,20 +11,13 @@ pub use crate::prelude::*;
 pub(crate) type FileOpenEventCtxType = Arc<Mutex<FileOpenEventCtx>>;
 
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct VideoStreamMeta {
-    file_path: String,
-    current_position: u64,
-    total_size: u64,
-    chunk_size: usize,
-}
-
-
 pub(crate) mod file_open_event {
     use super::*;
     use crate::tauri::tauri_callback::source_open_closure::SourceOpenClosure;
     use crate::tauri::tauri_events::source_open_event::{SourceOpenEvent, SourceOpenEventCtx};
     use crate::video::video_callback::CallbackClosureWrapper;
+    use rehash_utils::codec::VideoStreamMeta;
+    use rehash_utils::utils::tauri_invoke;
     use std::cell::RefCell;
     use std::rc::Rc;
     use wasm_bindgen::{JsCast, JsValue};
@@ -95,7 +88,7 @@ pub(crate) mod file_open_event {
         let args = into_object!("path" => file_path).unwrap();
 
         debug_console_log!("{:?}", args);
-        match JsFuture::from(tauri_invoke("create_video_stream", args.into())).await {
+        match into_async!(tauri_invoke("create_video_stream", args.into())).await {
             Ok(result) => {
                 let object: VideoStreamMeta = serde_wasm_bindgen::from_value(result).unwrap();
                 debug_console_log!("create_video_stream returned {:?}", object);
@@ -112,9 +105,9 @@ pub(crate) mod file_open_event {
 
 pub(crate) mod source_open_event {
     use super::*;
+    use rehash_utils::utils::tauri_invoke;
     use wasm_bindgen::JsValue;
     use web_sys::SourceBuffer;
-
 
     pub type SourceEventCtxType = Arc<Mutex<SourceOpenEventCtx>>;
 
@@ -130,7 +123,7 @@ pub(crate) mod source_open_event {
         fn trigger(&mut self, ctx: &mut SourceEventCtxType) -> RehashResultUnit {
             let ctx = ctx.clone();
             spawn_local(async move {
-                match JsFuture::from(tauri_invoke("get_chunk", JsValue::NULL)).await {
+                match into_async!(tauri_invoke("get_chunk", JsValue::NULL)).await {
                     Ok(chunk) => {
                         let mutex = ctx.lock().unwrap();
                         let uint8_array = js_sys::Uint8Array::new(&chunk);

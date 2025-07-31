@@ -1,6 +1,7 @@
 use js_sys::{Array, Function, Object, Reflect};
 use rehash_utils::errors::RehashResultUnit;
 use rehash_utils::logging::*;
+use rehash_utils::utils::{dynamic_import, set_panic_hook, tauri_read_binary_file, tauri_read_text_file, tauri_resolve_resource};
 use rehash_utils::*;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, JsValue};

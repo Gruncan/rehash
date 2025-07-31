@@ -27,21 +27,6 @@ fn wasm_error(message: String) {
     eprintln!("[WASM] {}", message);
 }
 
-#[tauri::command]
-async fn get_video_bytes(path: String) -> Result<Vec<u8>, String> {
-    println!("Reading video file: {}", path);
-
-    match fs::read(&path) {
-        Ok(data) => {
-            println!("Successfully read {} bytes", data.len());
-            Ok(data)
-        }
-        Err(e) => {
-            println!("Error reading file: {}", e);
-            Err(e.to_string())
-        }
-    }
-}
 
 #[tauri::command]
 async fn create_video_stream(stream_handler: State<'_, VideoStreamHandler>, path: String) -> Result<VideoStreamMeta, String> {

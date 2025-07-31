@@ -5,13 +5,12 @@ use crate::tauri::tauri_events::FileOpenEventCtxType;
 use crate::video::event::{CallbackController, CallbackEvent};
 use crate::video::video_callback::CallbackClosureWrapper;
 use js_sys::Reflect;
+use rehash_utils::utils::tauri_listen;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::HtmlVideoElement;
-
-pub use crate::prelude::*;
 
 #[derive(Clone)]
 pub(crate) struct FileOpenCallbackController {

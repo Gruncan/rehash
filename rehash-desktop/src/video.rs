@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+pub(crate) use rehash_utils::codec::{VideoStreamChunk, VideoStreamMeta};
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
@@ -26,27 +26,7 @@ impl VideoStreamContext {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct VideoStreamMeta {
-    file_path: String,
-    current_position: u64,
-    total_size: u64,
-    chunk_size: usize,
-}
 
-impl VideoStreamMeta {
-    pub fn new(file_path: String, current_position: u64, total_size: u64, chunk_size: usize) -> Self {
-        Self { file_path, current_position, total_size, chunk_size }
-    }
-}
-
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct VideoStreamChunk {
-    bytes: Vec<u8>,
-    position: u64,
-    is_final: bool,
-}
 
 
 impl VideoStreamHandler {

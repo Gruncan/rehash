@@ -1,4 +1,5 @@
-use crate::{into_object, tauri_invoke};
+use crate::utils::tauri_invoke;
+use crate::into_object;
 use wasm_bindgen::JsValue;
 
 #[cfg(feature = "tauri")]

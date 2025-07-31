@@ -6,9 +6,11 @@ mod tauri;
 
 use crate::html::html_callback::HtmlVideoCallbackController;
 use crate::prelude::*;
+use crate::prelude::*;
 use crate::tauri::tauri_callback::FileOpenCallbackController;
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController};
 use html::html_video::{HtmlVideoPlayerInternal, HtmlVideoUIController};
+use rehash_utils::utils::{set_panic_hook, tauri_invoke};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use video::event::CallbackController;
@@ -17,8 +19,6 @@ use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{HtmlElement, HtmlVideoElement};
-
-use crate::prelude::*;
 
 pub const WASM_VERSION: &str = env!("CARGO_PKG_VERSION");
 
