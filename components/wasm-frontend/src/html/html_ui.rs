@@ -101,7 +101,7 @@ impl VideoUIRegister for HtmlVideoUIController {
     }
 
     fn register_element_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, id: &str, closure: Box<Closure<T>>) {
-        self.document.get_element_by_id(id).expect("Failed to find element with id")
+        self.document.get_element_by_id(id).expect(format!("Failed to find element with id {}", id).as_str())
             .add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
             .expect("Failed to register element event listener");
         closure.forget();

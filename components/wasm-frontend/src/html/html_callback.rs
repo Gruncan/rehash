@@ -41,7 +41,7 @@ impl HtmlVideoCallbackController {
     const MUTE_UNMUTE_ID: &'static str = "volume-btn";
     const SETTINGS_ID: &'static str = "settings";
     const FULLSCREEN_ID: &'static str = "fullscreen";
-    const PROGRESS_BAR_ID: &'static str = "progress-bar";
+    const PROGRESS_BAR_ID: &'static str = "progress-container";
     const FAST_FORWARD_ID: &'static str = "fast-forward";
     const REWIND_ID: &'static str = "rewind";
     const VOLUME_ID: &'static str = "volume-slider";

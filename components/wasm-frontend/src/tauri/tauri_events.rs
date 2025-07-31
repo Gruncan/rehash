@@ -26,6 +26,7 @@ pub(crate) mod file_open_event {
 
     impl CallbackEvent<FileOpenEventCtxType> for FileOpenEvent {
         fn trigger(&mut self, ctx: &mut FileOpenEventCtxType) -> JsResult<()> {
+            debug_console_log!("In file open event");
             #[cfg(debug_assertions)]
             {
                 let mutex = ctx.lock().unwrap();
