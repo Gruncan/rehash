@@ -5,7 +5,7 @@ use rehash_utils::utils::{dynamic_import, set_panic_hook, tauri_read_binary_file
 use rehash_utils::*;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, JsValue};
-use wasm_bindgen_futures::JsFuture;
+
 use web_sys::{Blob, BlobPropertyBag, HtmlElement, Url};
 
 pub const WASM_VERSION: &str = env!("CARGO_PKG_VERSION");

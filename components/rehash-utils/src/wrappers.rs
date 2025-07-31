@@ -2,9 +2,10 @@ use crate::errors::RehashError;
 
 #[macro_export]
 macro_rules! into_async {
-    ($promise:expr) => {
+    ($promise:expr) => {{
+        use wasm_bindgen_futures::JsFuture;
         JsFuture::from($promise)
-    };
+    }};
 }
 
 #[macro_export]
