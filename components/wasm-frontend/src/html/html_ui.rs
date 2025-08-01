@@ -95,8 +95,14 @@ impl VideoUIRegister for HtmlVideoUIController {
         closure.forget();
     }
 
-    fn register_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>) {
+    fn register_video_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>) {
         self.video.add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
+            .expect("Failed to register global event listener");
+        closure.forget();
+    }
+
+    fn register_doc_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>) {
+        self.document.add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
             .expect("Failed to register global event listener");
         closure.forget();
     }

@@ -1,10 +1,12 @@
 use crate::callback_event;
 use crate::html::html_callback::control_closure::ControlClosure;
+use crate::html::html_callback::drag_exit_closure::DragExitClosure;
 use crate::html::html_callback::keyboard_closure::KeyboardClosure;
 use crate::html::html_callback::progress_closure::create_progress_closures;
 use crate::html::html_callback::time_update_closure::TimeUpdateClosure;
 use crate::html::html_callback::volume_closure::create_volume_closures;
-use crate::html::html_events::drag_events::{BarDragEvent, BarDragEventCtx, MouseDown, MouseMove, MouseUp, ProgressBarClickEvent, VolumeBarClickEvent};
+use crate::html::html_events::drag_events::{BarDragEvent, BarDragEventCtx, MouseDown, MouseMove, ProgressBarClickEvent, VolumeBarClickEvent};
+use crate::html::html_events::drag_events_exit::{DragEventExit, DragEventExitCtx};
 use crate::html::html_events::fast_forward_event::FastForwardEvent;
 use crate::html::html_events::fullscreen_event::FullScreenEvent;
 use crate::html::html_events::mute_unmute_event::MuteUnmuteEvent;
@@ -105,36 +107,39 @@ impl CallbackController for HtmlVideoCallbackController {
 
         let time_update = Box::new(TimeUpdateClosure::new(self.video_player.clone(), self.callback_progress_event.clone()));
         let timeupdate_closure = CallbackClosureWrapper::create_callback(time_update);
-        self.ui_controller.register_global_event_listener_specific("timeupdate", timeupdate_closure);
+        self.ui_controller.register_video_global_event_listener_specific("timeupdate", timeupdate_closure);
 
 
         // TODO This needs to be a shared state...
         let volume_drag_event = self.callback_volume_drag_event.borrow().clone_box();
-        let is_dragging = Rc::new(Cell::new(false));
+        let is_dragging_volume = Rc::new(Cell::new(false));
 
-        let mouse_up_volume_closure = create_volume_closures::<MouseUp>(self.video_player.clone(), is_dragging.clone(), volume_drag_event.clone_box());
-        self.ui_controller.register_element_event_listener_specific("mouseup", Self::VOLUME_ID, mouse_up_volume_closure);
-
-        let mouse_down_volume_closure = create_volume_closures::<MouseDown>(self.video_player.clone(), is_dragging.clone(), volume_drag_event.clone_box());
+        let mouse_down_volume_closure = create_volume_closures::<MouseDown>(self.video_player.clone(), is_dragging_volume.clone(), volume_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mousedown", Self::VOLUME_ID, mouse_down_volume_closure);
 
-        let mouse_move_volume_closure = create_volume_closures::<MouseMove>(self.video_player.clone(), is_dragging.clone(), volume_drag_event.clone_box());
+        let mouse_move_volume_closure = create_volume_closures::<MouseMove>(self.video_player.clone(), is_dragging_volume.clone(), volume_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mousemove", Self::VOLUME_ID, mouse_move_volume_closure);
 
 
         let progress_drag_event = self.callback_progress_drag_event.borrow().clone_box();
-        let is_dragging = Rc::new(Cell::new(false));
-        // let drag_event = Arc::new(progress_drag_event);
-        let mouse_up_progress_closure = create_progress_closures::<MouseUp>(self.video_player.clone(), is_dragging.clone(), progress_drag_event.clone_box());
-        self.ui_controller.register_element_event_listener_specific("mouseup", Self::PROGRESS_BAR_ID, mouse_up_progress_closure);
+        let is_dragging_progress = Rc::new(Cell::new(false));
 
-        let mouse_down_progress_closure = create_progress_closures::<MouseDown>(self.video_player.clone(), is_dragging.clone(), progress_drag_event.clone_box());
+        let mouse_down_progress_closure = create_progress_closures::<MouseDown>(self.video_player.clone(), is_dragging_progress.clone(), progress_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mousedown", Self::PROGRESS_BAR_ID, mouse_down_progress_closure);
 
-        let mouse_move_volume_closure = create_progress_closures::<MouseMove>(self.video_player.clone(), is_dragging.clone(), progress_drag_event.clone_box());
+        let mouse_move_volume_closure = create_progress_closures::<MouseMove>(self.video_player.clone(), is_dragging_progress.clone(), progress_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mousemove", Self::PROGRESS_BAR_ID, mouse_move_volume_closure);
 
-        debug_console_log!("Registered callback handler");
+
+        let drag_exit = Box::new(
+            DragExitClosure::new(DragEventExitCtx::new(vec![is_dragging_volume, is_dragging_progress]),
+                                 Rc::new(RefCell::new(DragEventExit::new())))
+        );
+        let drag_exit_closure = CallbackClosureWrapper::create_callback(drag_exit);
+        self.ui_controller.register_doc_global_event_listener_specific("mouseup", drag_exit_closure);
+
+
+        debug_console_log!("Registered callback handlers");
     }
 }
 
@@ -340,7 +345,7 @@ mod keyboard_closure {
     use super::*;
 
     type Ctx = SharedVideoPlayer;
-    type Callback = Rc<RefCell<dyn CallbackEvent<SharedVideoPlayer>>>;
+    type Callback = Rc<RefCell<dyn CallbackEvent<Ctx>>>;
 
     #[derive(Debug)]
     pub(crate) struct KeyboardClosure {
@@ -371,6 +376,37 @@ mod keyboard_closure {
                 let mut callback = callback_ref.borrow_mut();
                 let _ = callback.trigger(&mut self.ctx);
             }
+        }
+    }
+}
+
+
+mod drag_exit_closure {
+    use super::*;
+
+    type Ctx = DragEventExitCtx;
+    type Callback = Rc<RefCell<dyn CallbackEvent<Ctx>>>;
+
+    #[derive(Debug)]
+    pub(crate) struct DragExitClosure {
+        ctx: Ctx,
+        callback: Callback,
+    }
+
+
+    impl DragExitClosure {
+        pub(crate) fn new(ctx: Ctx, callback: Callback) -> Self {
+            Self {
+                ctx,
+                callback,
+            }
+        }
+    }
+
+    impl CallbackClosureWrapper<web_sys::MouseEvent> for DragExitClosure {
+        fn closure(&mut self, _: web_sys::MouseEvent) {
+            let mut callback = self.callback.borrow_mut();
+            let _ = callback.trigger(&mut self.ctx);
         }
     }
 }

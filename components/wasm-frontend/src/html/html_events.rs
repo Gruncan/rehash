@@ -373,10 +373,6 @@ pub(crate) mod drag_events {
                     ctx.is_dragging.set(true);
                     debug_console_log!("Setting is dragging to true");
                 }
-                id if id == TypeId::of::<MouseUp>() => {
-                    debug_console_log!("Triggering progress volume mouse up");
-                    ctx.is_dragging.set(false);
-                }
                 id if id == TypeId::of::<MouseMove>() => {
                     let percent = ctx.percent;
                     debug_console_log!("Mouse move progress Percent: {}%", percent);
@@ -403,7 +399,7 @@ pub(crate) mod drag_events {
         I: VideoInternal + 'static + Debug,
     {
         fn trigger(&mut self, ctx: &mut BarDragEventCtx<VolumeBarClickEvent>) -> JsResult<()> {
-
+            debug_console_log!("Volume drag state: {}", ctx.is_dragging.get());
             match ctx.action_id {
                 id if id == TypeId::of::<MouseDown>() => {
                     let percent = ctx.percent;
@@ -411,10 +407,6 @@ pub(crate) mod drag_events {
                     let video_mutex = ctx.video_player.borrow();
                     video_mutex.set_volume(percent);
                     ctx.is_dragging.set(true);
-                }
-                id if id == TypeId::of::<MouseUp>() => {
-                    debug_console_log!("Triggering progress volume mouse up");
-                    ctx.is_dragging.set(false);
                 }
                 id if id == TypeId::of::<MouseMove>() => {
                     if ctx.is_dragging.get() {
@@ -445,6 +437,49 @@ pub(crate) mod drag_events {
             Self {
                 marker: PhantomData
             }
+        }
+    }
+}
+
+pub(crate) mod drag_events_exit {
+    use super::*;
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    type Ctx = DragEventExitCtx;
+
+    #[derive(Debug)]
+    pub(crate) struct DragEventExitCtx {
+        drag_event_cells: Vec<Rc<Cell<bool>>>,
+    }
+
+    impl DragEventExitCtx {
+        pub fn new(drag_event_cells: Vec<Rc<Cell<bool>>>) -> Self {
+            Self {
+                drag_event_cells
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub(crate) struct DragEventExit {}
+
+    impl CallbackEvent<Ctx> for DragEventExit {
+        fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
+            for event_exit_cell in &ctx.drag_event_cells {
+                event_exit_cell.set(false);
+            }
+            Ok(())
+        }
+
+        fn clone_box(&self) -> Box<dyn CallbackEvent<Ctx>> {
+            Box::new(self.clone())
+        }
+    }
+
+    impl DragEventExit {
+        pub fn new() -> Self {
+            Self {}
         }
     }
 }
