@@ -9,8 +9,8 @@ use crate::prelude::*;
 use crate::tauri::tauri_callback::FileOpenCallbackController;
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController};
 use html::html_video::{HtmlVideoPlayerInternal, HtmlVideoUIController};
+use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 use video::event::CallbackController;
 use video::video_callback::*;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -35,8 +35,8 @@ pub fn main() {
 
 #[inline]
 fn create_shared_video_player(html_controller: Rc<dyn VideoUIController<HtmlVideoPlayerInternal>>, html_video_element: HtmlVideoElement) -> SharedVideoPlayer {
-    Arc::new(
-        Mutex::new(
+    Rc::new(
+        RefCell::new(
             Box::new(
                 VideoPlayer::new(
                     HtmlVideoPlayerInternal::new(html_video_element),

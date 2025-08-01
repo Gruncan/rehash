@@ -1,15 +1,15 @@
 use crate::prelude::*;
-use crate::video::event::EventCtxType;
 use crate::video::video_internal::VideoInternal;
 pub(crate) use crate::video::video_ui::VideoUIController;
 use crate::{debug_console_log, JsResult};
 use std::any::{Any, TypeId};
+use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
 use wasm_bindgen::JsValue;
 
 pub type VideoPlayerResult<I, S: VideoPlayerTypeState> = Result<VideoPlayer<I, S>, VideoPlayer<I, S::FallbackState>>;
-pub(crate) type SharedVideoPlayer = EventCtxType<Box<dyn VideoPlayerState>>;
+pub(crate) type SharedVideoPlayer = Rc<RefCell<Box<dyn VideoPlayerState>>>;
 
 #[derive(Debug)]
 pub struct VideoPlayer<I, S>

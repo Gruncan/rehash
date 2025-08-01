@@ -11,6 +11,23 @@ use wasm_bindings_lib::debug_console_log;
 
 pub use crate::prelude::*;
 
+fn get_video_player_state_return<I, S>(video_result: VideoPlayerResult<I, S>) -> Box<dyn VideoPlayerState>
+where
+    I: VideoInternal + 'static + Debug,
+    S: VideoPlayerTypeState + 'static + Debug,
+    <S as VideoPlayerTypeState>::FallbackState: VideoPlayerTypeState,
+    <S as VideoPlayerTypeState>::FallbackState: Debug,
+{
+    match video_result {
+        Ok(v) => {
+            Box::new(v) as Box<dyn VideoPlayerState>
+        }
+        Err(v) => {
+            Box::new(v) as Box<dyn VideoPlayerState>
+        }
+    }
+}
+
 
 pub(crate) mod play_pause_event {
     use super::*;
@@ -30,12 +47,11 @@ pub(crate) mod play_pause_event {
         I: VideoInternal + 'static + Debug,
     {
         fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
-            let mutex = ctx.lock().unwrap();
-            let mut cell = mutex;
+            let mut cell = ctx.borrow_mut();
 
             if cell.get_type_id() == TypeId::of::<Uninitialized>() {
                 let video_uninitialised: VideoPlayer<I, Uninitialized> = get_state_owned(cell.deref())?;
-                *cell = self.get_video_player_state_return(video_uninitialised.ready());
+                *cell = get_video_player_state_return(video_uninitialised.ready());
                 if cell.get_type_id() == TypeId::of::<Uninitialized>() {
                     return Ok(());
                 }
@@ -46,19 +62,19 @@ pub(crate) mod play_pause_event {
             match cell.get_type_id() {
                 id if id == TypeId::of::<Ready>() => {
                     let video_uninitialised: VideoPlayer<I, Ready> = get_state_owned(cell.deref())?;
-                    standard = self.get_video_player_state_return(video_uninitialised.play())
+                    standard = get_video_player_state_return(video_uninitialised.play())
                 }
                 id if id == TypeId::of::<Playing>() => {
                     let video_playing: VideoPlayer<I, Playing> = get_state_owned(cell.deref())?;
-                    standard = self.get_video_player_state_return(video_playing.pause());
+                    standard = get_video_player_state_return(video_playing.pause());
                 }
                 id if id == TypeId::of::<Paused>() => {
                     let video_paused: VideoPlayer<I, Paused> = get_state_owned(cell.deref())?;
-                    standard = self.get_video_player_state_return(video_paused.play());
+                    standard = get_video_player_state_return(video_paused.play());
                 }
                 id if id == TypeId::of::<Finished>() => {
                     let video_finished: VideoPlayer<I, Finished> = get_state_owned(cell.deref())?;
-                    standard = self.get_video_player_state_return(video_finished.restart());
+                    standard = get_video_player_state_return(video_finished.restart());
                 }
                 _ => {
                     return Err(JsValue::from_str("Callback play event has incorrect type"))
@@ -84,22 +100,6 @@ pub(crate) mod play_pause_event {
                 marker: PhantomData,
             }
         }
-
-        fn get_video_player_state_return<S>(&mut self, video_result: VideoPlayerResult<I, S>) -> Box<dyn VideoPlayerState>
-        where
-            S: VideoPlayerTypeState + 'static + Debug,
-            <S as VideoPlayerTypeState>::FallbackState: VideoPlayerTypeState,
-            <S as VideoPlayerTypeState>::FallbackState: Debug
-        {
-            match video_result {
-                Ok(v) => {
-                    Box::new(v) as Box<dyn VideoPlayerState>
-                }
-                Err(v) => {
-                    Box::new(v) as Box<dyn VideoPlayerState>
-                }
-            }
-        }
     }
 }
 
@@ -117,8 +117,7 @@ pub(crate) mod mute_unmute_event {
 
     impl CallbackEvent<SharedVideoPlayer> for MuteUnmuteEvent {
         fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
-            let mutex = ctx.lock().unwrap();
-            let video_player_state = mutex.deref();
+            let video_player_state = ctx.borrow();
 
             if self.is_unmuted() {
                 video_player_state.mute();
@@ -159,8 +158,7 @@ pub(crate) mod progress_bar_change_event {
 
     impl CallbackEvent<SharedVideoPlayer> for ProgressBarChangeEvent {
         fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
-            let mutex = ctx.lock().unwrap();
-            let cell = mutex.deref();
+            let cell = ctx.borrow();
 
             cell.set_video_time();
 
@@ -239,8 +237,8 @@ pub(crate) mod rewind_event {
     impl CallbackEvent<SharedVideoPlayer> for RewindEvent
     {
         fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
-            let mutex = ctx.lock().unwrap();
-            mutex.rewind();
+            let video_player = ctx.borrow();
+            video_player.rewind();
             Ok(())
         }
 
@@ -264,8 +262,8 @@ pub(crate) mod fast_forward_event {
 
     impl CallbackEvent<SharedVideoPlayer> for FastForwardEvent {
         fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
-            let mutex = ctx.lock().unwrap();
-            mutex.fast_forward();
+            let video_player = ctx.borrow();
+            video_player.fast_forward();
             Ok(())
         }
 
@@ -342,44 +340,48 @@ pub(crate) mod drag_events {
 
 
     #[derive(Debug, Clone)]
-    pub(crate) struct BarDragEvent {
-
+    pub(crate) struct BarDragEvent<I>
+    where
+        I: VideoInternal + 'static,
+    {
+        marker: PhantomData<I>,
     }
 
-
-    impl CallbackEvent<Ctx> for BarDragEvent
+    impl<I> CallbackEvent<Ctx> for BarDragEvent<I>
+    where
+        I: VideoInternal + 'static + Debug,
     {
         fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
             debug_console_log!("Percent: {}", ctx.percent);
 
-            // ctx.video_player.borrow().
+            let mut video_player = ctx.video_player.borrow_mut();
+
+            if video_player.get_type_id() == TypeId::of::<Uninitialized>() {
+                debug_console_log!("Not changing state as video not initialized");
+                let video_uninitialised: VideoPlayer<I, Uninitialized> = get_state_owned(video_player.deref())?;
+                *video_player = get_video_player_state_return(video_uninitialised.ready());
+                if video_player.get_type_id() == TypeId::of::<Uninitialized>() {
+                    return Ok(());
+                }
+            }
 
             match ctx.action_id {
                 id if id == TypeId::of::<MouseDown>() => {
                     let percent = ctx.percent;
                     debug_console_log!("Progress mouse down Percent: {}%", percent);
-                    let video_mutex = ctx.video_player.borrow();
-                    video_mutex.set_video_progress(percent);
-                    // self.is_dragging = true;
+                    video_player.set_video_progress(percent);
                     ctx.is_dragging.set(true);
                     debug_console_log!("Setting is dragging to true");
                 }
                 id if id == TypeId::of::<MouseUp>() => {
                     debug_console_log!("Triggering progress volume mouse up");
                     ctx.is_dragging.set(false);
-                    // let video_mutex = ctx.video_player.borrow();
-                    // let percent = ctx.percent;
-                    // video_mutex.set_video_progress(percent);// self.is_dragging = false;
                 }
                 id if id == TypeId::of::<MouseMove>() => {
                     let percent = ctx.percent;
                     debug_console_log!("Mouse move progress Percent: {}%", percent);
                     if ctx.is_dragging.get() {
-                        debug_console_log!("Dragging mouse move is dragging is true");
-                        let video_mutex = ctx.video_player.borrow();
-                        video_mutex.set_video_progress(percent);
-                    } else {
-                        debug_console_log!("Dragging mouse move is dragging is false");
+                        video_player.set_video_progress(percent);
                     }
                 }
                 _ => {
@@ -396,7 +398,9 @@ pub(crate) mod drag_events {
         }
     }
 
-    impl CallbackEvent<BarDragEventCtx<VolumeBarClickEvent>> for BarDragEvent
+    impl<I> CallbackEvent<BarDragEventCtx<VolumeBarClickEvent>> for BarDragEvent<I>
+    where
+        I: VideoInternal + 'static + Debug,
     {
         fn trigger(&mut self, ctx: &mut BarDragEventCtx<VolumeBarClickEvent>) -> JsResult<()> {
 
@@ -433,9 +437,14 @@ pub(crate) mod drag_events {
         }
     }
 
-    impl BarDragEvent {
+    impl<I> BarDragEvent<I>
+    where
+        I: VideoInternal + 'static + Debug,
+    {
         pub fn new() -> Self {
-            Self {}
+            Self {
+                marker: PhantomData
+            }
         }
     }
 }

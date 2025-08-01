@@ -53,8 +53,8 @@ impl HtmlVideoCallbackController {
         let settings_event: crate::html::html_video::Event = callback_event!(SettingsEvent);
         let fullscreen_event: crate::html::html_video::Event = callback_event!(FullScreenEvent);
 
-        let volume_drag_event: Rc<RefCell<dyn CallbackEvent<BarDragEventCtx<VolumeBarClickEvent>>>> = Rc::new(RefCell::new(BarDragEvent::new()));
-        let progress_drag_event: Rc<RefCell<dyn CallbackEvent<BarDragEventCtx<ProgressBarClickEvent>>>> = Rc::new(RefCell::new(BarDragEvent::new()));;
+        let volume_drag_event: Rc<RefCell<dyn CallbackEvent<BarDragEventCtx<VolumeBarClickEvent>>>> = Rc::new(RefCell::new(BarDragEvent::<HtmlVideoPlayerInternal>::new()));
+        let progress_drag_event: Rc<RefCell<dyn CallbackEvent<BarDragEventCtx<ProgressBarClickEvent>>>> = Rc::new(RefCell::new(BarDragEvent::<HtmlVideoPlayerInternal>::new()));;
 
 
         let fast_forward_event: crate::html::html_video::Event = callback_event!(FastForwardEvent);
@@ -110,31 +110,28 @@ impl CallbackController for HtmlVideoCallbackController {
 
         // TODO This needs to be a shared state...
         let volume_drag_event = self.callback_volume_drag_event.borrow().clone_box();
-        let player = self.video_player.clone();
-        let mutex = player.lock().unwrap();
-        let instance = Rc::new(RefCell::new(mutex.clone_box()));
         let is_dragging = Rc::new(Cell::new(false));
 
-        let mouse_up_volume_closure = create_volume_closures::<MouseUp>(instance.clone(), is_dragging.clone(), volume_drag_event.clone_box());
+        let mouse_up_volume_closure = create_volume_closures::<MouseUp>(self.video_player.clone(), is_dragging.clone(), volume_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mouseup", Self::VOLUME_ID, mouse_up_volume_closure);
 
-        let mouse_down_volume_closure = create_volume_closures::<MouseDown>(instance.clone(), is_dragging.clone(), volume_drag_event.clone_box());
+        let mouse_down_volume_closure = create_volume_closures::<MouseDown>(self.video_player.clone(), is_dragging.clone(), volume_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mousedown", Self::VOLUME_ID, mouse_down_volume_closure);
 
-        let mouse_move_volume_closure = create_volume_closures::<MouseMove>(instance.clone(), is_dragging.clone(), volume_drag_event.clone_box());
+        let mouse_move_volume_closure = create_volume_closures::<MouseMove>(self.video_player.clone(), is_dragging.clone(), volume_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mousemove", Self::VOLUME_ID, mouse_move_volume_closure);
 
 
         let progress_drag_event = self.callback_progress_drag_event.borrow().clone_box();
         let is_dragging = Rc::new(Cell::new(false));
         // let drag_event = Arc::new(progress_drag_event);
-        let mouse_up_progress_closure = create_progress_closures::<MouseUp>(instance.clone(), is_dragging.clone(), progress_drag_event.clone_box());
+        let mouse_up_progress_closure = create_progress_closures::<MouseUp>(self.video_player.clone(), is_dragging.clone(), progress_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mouseup", Self::PROGRESS_BAR_ID, mouse_up_progress_closure);
 
-        let mouse_down_progress_closure = create_progress_closures::<MouseDown>(instance.clone(), is_dragging.clone(), progress_drag_event.clone_box());
+        let mouse_down_progress_closure = create_progress_closures::<MouseDown>(self.video_player.clone(), is_dragging.clone(), progress_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mousedown", Self::PROGRESS_BAR_ID, mouse_down_progress_closure);
 
-        let mouse_move_volume_closure = create_progress_closures::<MouseMove>(instance.clone(), is_dragging.clone(), progress_drag_event.clone_box());
+        let mouse_move_volume_closure = create_progress_closures::<MouseMove>(self.video_player.clone(), is_dragging.clone(), progress_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mousemove", Self::PROGRESS_BAR_ID, mouse_move_volume_closure);
 
         debug_console_log!("Registered callback handler");
