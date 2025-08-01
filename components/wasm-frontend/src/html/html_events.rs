@@ -22,7 +22,6 @@ pub(crate) mod play_pause_event {
         I: VideoInternal + 'static,
     {
         marker: PhantomData<I>,
-        type_id: TypeId,
     }
 
 
@@ -34,17 +33,17 @@ pub(crate) mod play_pause_event {
             let mutex = ctx.lock().unwrap();
             let mut cell = mutex;
 
-            if self.type_id == TypeId::of::<Uninitialized>() {
+            if cell.get_type_id() == TypeId::of::<Uninitialized>() {
                 let video_uninitialised: VideoPlayer<I, Uninitialized> = get_state_owned(cell.deref())?;
                 *cell = self.get_video_player_state_return(video_uninitialised.ready());
-                if self.type_id == TypeId::of::<Uninitialized>() {
+                if cell.get_type_id() == TypeId::of::<Uninitialized>() {
                     return Ok(());
                 }
             }
 
             let standard: Box<dyn VideoPlayerState>;
 
-            match self.type_id {
+            match cell.get_type_id() {
                 id if id == TypeId::of::<Ready>() => {
                     let video_uninitialised: VideoPlayer<I, Ready> = get_state_owned(cell.deref())?;
                     standard = self.get_video_player_state_return(video_uninitialised.play())
@@ -83,7 +82,6 @@ pub(crate) mod play_pause_event {
         pub(crate) fn new() -> Self {
             Self {
                 marker: PhantomData,
-                type_id: TypeId::of::<Uninitialized>(),
             }
         }
 
@@ -95,11 +93,9 @@ pub(crate) mod play_pause_event {
         {
             match video_result {
                 Ok(v) => {
-                    self.type_id = TypeId::of::<S>();
                     Box::new(v) as Box<dyn VideoPlayerState>
                 }
                 Err(v) => {
-                    self.type_id = TypeId::of::<S::FallbackState>();
                     Box::new(v) as Box<dyn VideoPlayerState>
                 }
             }
@@ -355,6 +351,8 @@ pub(crate) mod drag_events {
     {
         fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
             debug_console_log!("Percent: {}", ctx.percent);
+
+            // ctx.video_player.borrow().
 
             match ctx.action_id {
                 id if id == TypeId::of::<MouseDown>() => {

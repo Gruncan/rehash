@@ -3,7 +3,7 @@ use crate::video::event::EventCtxType;
 use crate::video::video_internal::VideoInternal;
 pub(crate) use crate::video::video_ui::VideoUIController;
 use crate::{debug_console_log, JsResult};
-use std::any::Any;
+use std::any::{Any, TypeId};
 use std::fmt::Debug;
 use std::rc::Rc;
 use wasm_bindgen::JsValue;
@@ -49,6 +49,8 @@ pub trait VideoPlayerState: Debug {
     fn set_volume(&self, volume: f64);
 
     fn clone_box(&self) -> Box<dyn VideoPlayerState>;
+
+    fn get_type_id(&self) -> TypeId;
 }
 
 impl<I, S> VideoPlayerState for VideoPlayer<I, S>
@@ -112,6 +114,10 @@ where
     fn clone_box(&self) -> Box<dyn VideoPlayerState> {
         Box::new(self.clone())
     }
+
+    fn get_type_id(&self) -> TypeId {
+        self.type_id
+    }
 }
 
 #[inline]
@@ -141,6 +147,10 @@ where
             video_controller: self.video_controller,
         }
     }
+
+    pub fn get_type(&self) -> TypeId {
+        self.type_id
+    }
 }
 
 
@@ -168,7 +178,7 @@ where
         VideoPlayer {
             internal,
             marker: std::marker::PhantomData,
-            type_id: std::any::TypeId::of::<Paused>(),
+            type_id: std::any::TypeId::of::<Uninitialized>(),
             video_controller,
         }
     }
