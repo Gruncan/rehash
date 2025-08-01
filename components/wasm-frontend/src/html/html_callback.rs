@@ -1,10 +1,9 @@
 use crate::callback_event;
 use crate::html::html_callback::control_closure::ControlClosure;
+use crate::html::html_callback::drag_closure::create_closure;
 use crate::html::html_callback::drag_exit_closure::DragExitClosure;
 use crate::html::html_callback::keyboard_closure::KeyboardClosure;
-use crate::html::html_callback::progress_closure::create_progress_closures;
 use crate::html::html_callback::time_update_closure::TimeUpdateClosure;
-use crate::html::html_callback::volume_closure::create_volume_closures;
 use crate::html::html_events::drag_events::{BarDragEvent, BarDragEventCtx, MouseDown, MouseMove, ProgressBarClickEvent, VolumeBarClickEvent};
 use crate::html::html_events::drag_events_exit::{DragEventExit, DragEventExitCtx};
 use crate::html::html_events::fast_forward_event::FastForwardEvent;
@@ -110,25 +109,25 @@ impl CallbackController for HtmlVideoCallbackController {
         self.ui_controller.register_video_global_event_listener_specific("timeupdate", timeupdate_closure);
 
 
-        // TODO This needs to be a shared state...
+        // TODO this can be done with a single closure
         let volume_drag_event = self.callback_volume_drag_event.borrow().clone_box();
         let is_dragging_volume = Rc::new(Cell::new(false));
 
-        let mouse_down_volume_closure = create_volume_closures::<MouseDown>(self.video_player.clone(), is_dragging_volume.clone(), volume_drag_event.clone_box());
+        let mouse_down_volume_closure = create_closure::<MouseDown, VolumeBarClickEvent>(self.video_player.clone(), is_dragging_volume.clone(), volume_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mousedown", Self::VOLUME_ID, mouse_down_volume_closure);
 
-        let mouse_move_volume_closure = create_volume_closures::<MouseMove>(self.video_player.clone(), is_dragging_volume.clone(), volume_drag_event.clone_box());
+        let mouse_move_volume_closure = create_closure::<MouseDown, VolumeBarClickEvent>(self.video_player.clone(), is_dragging_volume.clone(), volume_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mousemove", Self::VOLUME_ID, mouse_move_volume_closure);
 
 
         let progress_drag_event = self.callback_progress_drag_event.borrow().clone_box();
         let is_dragging_progress = Rc::new(Cell::new(false));
 
-        let mouse_down_progress_closure = create_progress_closures::<MouseDown>(self.video_player.clone(), is_dragging_progress.clone(), progress_drag_event.clone_box());
+        let mouse_down_progress_closure = create_closure::<MouseDown, ProgressBarClickEvent>(self.video_player.clone(), is_dragging_progress.clone(), progress_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mousedown", Self::PROGRESS_BAR_ID, mouse_down_progress_closure);
 
-        let mouse_move_volume_closure = create_progress_closures::<MouseMove>(self.video_player.clone(), is_dragging_progress.clone(), progress_drag_event.clone_box());
-        self.ui_controller.register_element_event_listener_specific("mousemove", Self::PROGRESS_BAR_ID, mouse_move_volume_closure);
+        let mouse_move_progress_closure = create_closure::<MouseMove, ProgressBarClickEvent>(self.video_player.clone(), is_dragging_progress.clone(), progress_drag_event.clone_box());
+        self.ui_controller.register_element_event_listener_specific("mousemove", Self::PROGRESS_BAR_ID, mouse_move_progress_closure);
 
 
         let drag_exit = Box::new(
@@ -144,47 +143,66 @@ impl CallbackController for HtmlVideoCallbackController {
 }
 
 
-mod volume_closure {
+mod drag_closure {
     use super::*;
-    use crate::html::html_events::drag_events::DragAction;
+    use crate::html::html_events::drag_events::{BarDraggable, DragAction};
     use crate::log_to_tauri;
     use crate::video::video_callback::{CallbackClosureWrapper, VideoPlayerState};
     use std::cell::Cell;
     use std::fmt::{Debug, Formatter};
     use web_sys::HtmlElement;
 
-    type Ctx = BarDragEventCtx<VolumeBarClickEvent>;
-    type Callback = Box<dyn CallbackEvent<BarDragEventCtx<VolumeBarClickEvent>>>;
+    type Ctx<T> = BarDragEventCtx<T>;
+    type Callback<T> = Box<dyn CallbackEvent<Ctx<T>>>;
     type Closure<S> = Box<wasm_bindgen::closure::Closure<dyn FnMut(S)>>;
 
-    pub(crate) struct VolumeBarDragClosure {
-        ctx: Ctx,
-        callback: Callback,
-        volume_slider_width: Option<f64>,
+    pub(crate) struct BarDragClosure<T>
+    where
+        T: BarDraggable + 'static,
+    {
+        ctx: Ctx<T>,
+        callback: Callback<T>,
+        slider_width: Option<f64>,
+        slider_left: Option<f64>,
     }
 
-    impl VolumeBarDragClosure {
-        pub(crate) fn new(ctx: Ctx, callback: Callback) -> Self {
-            Self { ctx, callback, volume_slider_width: None }
+    impl<T> BarDragClosure<T>
+    where
+        T: BarDraggable + 'static,
+    {
+        pub(crate) fn new(ctx: Ctx<T>, callback: Callback<T>) -> Self {
+            Self { ctx, callback, slider_width: None, slider_left: None }
         }
     }
 
-    impl Debug for VolumeBarDragClosure {
+    impl<T> Debug for BarDragClosure<T>
+    where
+        T: BarDraggable + 'static + Debug,
+    {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            write!(f, "VolumeBarDragClosure{:?}", self.ctx)
+            write!(f, "BarDragClosure{:?}", self.ctx)
         }
     }
 
-    impl CallbackClosureWrapper<web_sys::MouseEvent> for VolumeBarDragClosure {
+    impl<T> CallbackClosureWrapper<web_sys::MouseEvent> for BarDragClosure<T>
+    where
+        T: BarDraggable + 'static + Debug,
+    {
         fn closure(&mut self, event: web_sys::MouseEvent) {
             let target = event.target().unwrap();
             if let Some(element) = target.dyn_ref::<HtmlElement>() {
                 let rec = element.get_bounding_client_rect();
-                if self.volume_slider_width.is_none() {
-                    self.volume_slider_width = Some(rec.width());
+
+                if self.slider_width.is_none() {
+                    self.slider_width = Some(rec.width());
                 }
+
+                if self.slider_left.is_none() {
+                    self.slider_left = Some(rec.left());
+                }
+
                 let click_x = event.client_x() as f64;
-                let percent = ((click_x - rec.left()) / self.volume_slider_width.unwrap()).max(0f64).min(1f64);
+                let percent = ((click_x - self.slider_left.unwrap()) / self.slider_width.unwrap()).max(0f64).min(1f64);
                 debug_console_log!("click x: {}\n rec.left(): {}\n rec.width(): {}", event.client_x() as f64, rec.left(), rec.width());
 
                 self.ctx.percent = percent;
@@ -200,83 +218,17 @@ mod volume_closure {
     }
 
     #[inline]
-    pub fn create_volume_closures<T>(video_player: Rc<RefCell<Box<dyn VideoPlayerState>>>, is_dragging: Rc<Cell<bool>>, callback: Callback) -> Closure<web_sys::MouseEvent>
+    pub fn create_closure<A, T>(video_player: Rc<RefCell<Box<dyn VideoPlayerState>>>, is_dragging: Rc<Cell<bool>>, callback: Callback<T>) -> Closure<web_sys::MouseEvent>
     where
-        T: DragAction + 'static,
+        A: DragAction + 'static,
+        T: BarDraggable + 'static + Debug,
     {
-        let ctx = BarDragEventCtx::new::<T>(video_player, is_dragging);
-        let ref_closure_wrapper = Box::new(VolumeBarDragClosure::new(ctx, callback));
+        let ctx = BarDragEventCtx::new::<A>(video_player, is_dragging);
+        let ref_closure_wrapper = Box::new(BarDragClosure::new(ctx, callback));
         CallbackClosureWrapper::create_callback(ref_closure_wrapper)
     }
 }
 
-mod progress_closure {
-    use super::*;
-    use crate::html::html_events::drag_events::DragAction;
-    use crate::log_to_tauri;
-    use crate::video::video_callback::{CallbackClosureWrapper, VideoPlayerState};
-    use std::cell::Cell;
-    use web_sys::HtmlElement;
-
-    type Ctx = BarDragEventCtx<ProgressBarClickEvent>;
-    type Callback = Box<dyn CallbackEvent<BarDragEventCtx<ProgressBarClickEvent>>>;
-    type Closure<S> = Box<wasm_bindgen::closure::Closure<dyn FnMut(S)>>;
-
-    #[derive(Debug)]
-    pub(crate) struct ProgressBarDragClosure {
-        ctx: Ctx,
-        callback: Callback,
-        slider_width: Option<f64>,
-        slider_left: Option<f64>,
-    }
-
-    impl ProgressBarDragClosure {
-        pub(crate) fn new(ctx: Ctx, callback: Callback) -> Self {
-            Self { ctx, callback, slider_width: None, slider_left: None }
-        }
-    }
-
-    impl CallbackClosureWrapper<web_sys::MouseEvent> for ProgressBarDragClosure {
-        fn closure(&mut self, event: web_sys::MouseEvent) {
-            let target = event.target().unwrap();
-            if let Some(element) = target.dyn_ref::<HtmlElement>() {
-                let rec = element.get_bounding_client_rect();
-
-                if self.slider_width.is_none() {
-                    self.slider_width = Some(rec.width());
-                }
-
-                if self.slider_left.is_none() {
-                    self.slider_left = Some(rec.left());
-                }
-
-                let click_x = event.client_x() as f64;
-                let percent = ((click_x - self.slider_left.unwrap()) / self.slider_width.unwrap()).max(0f64);
-                debug_console_log!("click x: {}\n rec.left(): {}\n rec.width(): {}", event.client_x() as f64, self.slider_left.unwrap(), self.slider_width.unwrap());
-
-                self.ctx.percent = percent;
-
-                // todo fix second player clone
-                match self.callback.trigger(&mut self.ctx) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
-                    }
-                }
-            }
-        }
-    }
-
-    #[inline]
-    pub fn create_progress_closures<T>(video_player: Rc<RefCell<Box<dyn VideoPlayerState>>>, is_dragging: Rc<Cell<bool>>, callback: Callback) -> Closure<web_sys::MouseEvent>
-    where
-        T: DragAction + 'static,
-    {
-        let ctx = BarDragEventCtx::new::<T>(video_player, is_dragging);
-        let ref_closure_wrapper = Box::new(ProgressBarDragClosure::new(ctx, callback));
-        CallbackClosureWrapper::create_callback(ref_closure_wrapper)
-    }
-}
 
 mod time_update_closure {
     use super::*;
@@ -380,7 +332,6 @@ mod keyboard_closure {
     }
 }
 
-
 mod drag_exit_closure {
     use super::*;
 
@@ -410,3 +361,5 @@ mod drag_exit_closure {
         }
     }
 }
+
+mod start_clip_drag_closure {}

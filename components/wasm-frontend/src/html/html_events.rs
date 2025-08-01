@@ -293,19 +293,26 @@ pub(crate) mod drag_events {
     pub(crate) struct VolumeBarClickEvent {}
 
 
+    #[derive(Debug, Clone)]
+    pub(crate) struct StartClipDot {}
+
+    #[derive(Debug, Clone)]
+    pub(crate) struct EndClipDot {}
+
+
     pub(crate) enum MouseDown {}
-    pub(crate) enum MouseUp {}
     pub(crate) enum MouseMove {}
 
     pub(crate) trait DragAction {}
     pub(crate) trait BarDraggable {}
 
     impl DragAction for MouseMove {}
-    impl DragAction for MouseUp {}
     impl DragAction for MouseDown {}
 
     impl BarDraggable for VolumeBarClickEvent {}
     impl BarDraggable for ProgressBarClickEvent {}
+    impl BarDraggable for StartClipDot {}
+    impl BarDraggable for EndClipDot {}
 
 
     #[derive(Debug)]
@@ -428,6 +435,39 @@ pub(crate) mod drag_events {
             Box::new(self.clone())
         }
     }
+
+    impl<I> CallbackEvent<BarDragEventCtx<EndClipDot>> for BarDragEvent<I>
+    where
+        I: VideoInternal + 'static + Debug,
+    {
+        fn trigger(&mut self, ctx: &mut BarDragEventCtx<EndClipDot>) -> JsResult<()> {
+            debug_console_log!("EndClipDot drag state: {}", ctx.is_dragging.get());
+
+            Ok(())
+        }
+
+        fn clone_box(&self) -> Box<dyn CallbackEvent<BarDragEventCtx<EndClipDot>>> {
+            Box::new(self.clone())
+        }
+    }
+
+    impl<I> CallbackEvent<BarDragEventCtx<StartClipDot>> for BarDragEvent<I>
+    where
+        I: VideoInternal + 'static + Debug,
+    {
+        fn trigger(&mut self, ctx: &mut BarDragEventCtx<StartClipDot>) -> JsResult<()> {
+            debug_console_log!("StartClipDot drag state: {}", ctx.is_dragging.get());
+
+
+            Ok(())
+        }
+
+        fn clone_box(&self) -> Box<dyn CallbackEvent<BarDragEventCtx<StartClipDot>>> {
+            Box::new(self.clone())
+        }
+    }
+
+
 
     impl<I> BarDragEvent<I>
     where
