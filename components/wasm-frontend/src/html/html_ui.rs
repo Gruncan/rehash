@@ -51,6 +51,7 @@ impl VideoUIController<HtmlVideoPlayerInternal> for HtmlVideoUIController {
     }
 
     fn update_progress(&self, progress: f64, duration: f64) {
+        // debug_console_log!("update_progress: {}:", progress);
         self.current_time.set_text_content(Some(format_time(progress).as_str()));
         self.total_time.set_text_content(Some(format_time(duration).as_str()));
 

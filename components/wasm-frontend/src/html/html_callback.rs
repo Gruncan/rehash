@@ -3,6 +3,7 @@ use crate::html::html_callback::control_closure::ControlClosure;
 use crate::html::html_callback::keyboard_closure::KeyboardClosure;
 use crate::html::html_callback::progress_closure::create_progress_closures;
 use crate::html::html_callback::time_update_closure::TimeUpdateClosure;
+use crate::html::html_callback::volume_closure::create_volume_closures;
 use crate::html::html_events::drag_events::{BarDragEvent, BarDragEventCtx, MouseDown, MouseMove, MouseUp, ProgressBarClickEvent, VolumeBarClickEvent};
 use crate::html::html_events::fast_forward_event::FastForwardEvent;
 use crate::html::html_events::fullscreen_event::FullScreenEvent;
@@ -40,7 +41,7 @@ impl HtmlVideoCallbackController {
     const MUTE_UNMUTE_ID: &'static str = "volume-btn";
     const SETTINGS_ID: &'static str = "settings";
     const FULLSCREEN_ID: &'static str = "fullscreen";
-    const PROGRESS_BAR_ID: &'static str = "progress-container";
+    const PROGRESS_BAR_ID: &'static str = "progress-bar";
     const FAST_FORWARD_ID: &'static str = "fast-forward";
     const REWIND_ID: &'static str = "rewind";
     const VOLUME_ID: &'static str = "volume-slider";
@@ -112,16 +113,16 @@ impl CallbackController for HtmlVideoCallbackController {
         let player = self.video_player.clone();
         let mutex = player.lock().unwrap();
         let instance = Rc::new(RefCell::new(mutex.clone_box()));
+        let is_dragging = Rc::new(Cell::new(false));
 
+        let mouse_up_volume_closure = create_volume_closures::<MouseUp>(instance.clone(), is_dragging.clone(), volume_drag_event.clone_box());
+        self.ui_controller.register_element_event_listener_specific("mouseup", Self::VOLUME_ID, mouse_up_volume_closure);
 
-        // let mouse_up_volume_closure = create_volume_closures::<MouseUp>(instance.clone(), volume_drag_event.clone());
-        // self.ui_controller.register_element_event_listener_specific("mouseup", Self::VOLUME_ID, mouse_up_volume_closure);
-        //
-        // let mouse_down_volume_closure = create_volume_closures::<MouseDown>(instance.clone(), volume_drag_event.clone());
-        // self.ui_controller.register_element_event_listener_specific("mousedown", Self::VOLUME_ID, mouse_down_volume_closure);
-        //
-        // let mouse_move_volume_closure = create_volume_closures::<MouseMove>(instance.clone(), volume_drag_event.clone());
-        // self.ui_controller.register_element_event_listener_specific("mousemove", Self::VOLUME_ID, mouse_move_volume_closure);
+        let mouse_down_volume_closure = create_volume_closures::<MouseDown>(instance.clone(), is_dragging.clone(), volume_drag_event.clone_box());
+        self.ui_controller.register_element_event_listener_specific("mousedown", Self::VOLUME_ID, mouse_down_volume_closure);
+
+        let mouse_move_volume_closure = create_volume_closures::<MouseMove>(instance.clone(), is_dragging.clone(), volume_drag_event.clone_box());
+        self.ui_controller.register_element_event_listener_specific("mousemove", Self::VOLUME_ID, mouse_move_volume_closure);
 
 
         let progress_drag_event = self.callback_progress_drag_event.borrow().clone_box();
@@ -157,11 +158,12 @@ mod volume_closure {
     pub(crate) struct VolumeBarDragClosure {
         ctx: Ctx,
         callback: Callback,
+        volume_slider_width: Option<f64>,
     }
 
     impl VolumeBarDragClosure {
         pub(crate) fn new(ctx: Ctx, callback: Callback) -> Self {
-            Self { ctx, callback }
+            Self { ctx, callback, volume_slider_width: None }
         }
     }
 
@@ -176,9 +178,12 @@ mod volume_closure {
             let target = event.target().unwrap();
             if let Some(element) = target.dyn_ref::<HtmlElement>() {
                 let rec = element.get_bounding_client_rect();
+                if self.volume_slider_width.is_none() {
+                    self.volume_slider_width = Some(rec.width());
+                }
                 let click_x = event.client_x() as f64;
-                let percent = ((click_x - rec.left()) / rec.width()).max(0f64);
-
+                let percent = ((click_x - rec.left()) / self.volume_slider_width.unwrap()).max(0f64).min(1f64);
+                debug_console_log!("click x: {}\n rec.left(): {}\n rec.width(): {}", event.client_x() as f64, rec.left(), rec.width());
 
                 self.ctx.percent = percent;
                 // todo fix second player clone
@@ -219,11 +224,13 @@ mod progress_closure {
     pub(crate) struct ProgressBarDragClosure {
         ctx: Ctx,
         callback: Callback,
+        slider_width: Option<f64>,
+        slider_left: Option<f64>,
     }
 
     impl ProgressBarDragClosure {
         pub(crate) fn new(ctx: Ctx, callback: Callback) -> Self {
-            Self { ctx, callback }
+            Self { ctx, callback, slider_width: None, slider_left: None }
         }
     }
 
@@ -232,8 +239,18 @@ mod progress_closure {
             let target = event.target().unwrap();
             if let Some(element) = target.dyn_ref::<HtmlElement>() {
                 let rec = element.get_bounding_client_rect();
+
+                if self.slider_width.is_none() {
+                    self.slider_width = Some(rec.width());
+                }
+
+                if self.slider_left.is_none() {
+                    self.slider_left = Some(rec.left());
+                }
+
                 let click_x = event.client_x() as f64;
-                let percent = ((click_x - rec.left()) / rec.width()).max(0f64);
+                let percent = ((click_x - self.slider_left.unwrap()) / self.slider_width.unwrap()).max(0f64);
+                debug_console_log!("click x: {}\n rec.left(): {}\n rec.width(): {}", event.client_x() as f64, self.slider_left.unwrap(), self.slider_width.unwrap());
 
                 self.ctx.percent = percent;
 

@@ -101,7 +101,7 @@ where
         let duration = self.get_video_length();
         let time = duration * progress;
         self.internal.set_video_progress(time);
-        self.video_controller.update_progress(progress, duration)
+        self.video_controller.update_progress(time, duration)
     }
 
     fn set_volume(&self, volume: f64) {

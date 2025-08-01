@@ -347,7 +347,7 @@ pub(crate) mod drag_events {
 
     #[derive(Debug, Clone)]
     pub(crate) struct BarDragEvent {
-        is_dragging: bool,
+
     }
 
 
@@ -369,7 +369,9 @@ pub(crate) mod drag_events {
                 id if id == TypeId::of::<MouseUp>() => {
                     debug_console_log!("Triggering progress volume mouse up");
                     ctx.is_dragging.set(false);
-                    // self.is_dragging = false;
+                    // let video_mutex = ctx.video_player.borrow();
+                    // let percent = ctx.percent;
+                    // video_mutex.set_video_progress(percent);// self.is_dragging = false;
                 }
                 id if id == TypeId::of::<MouseMove>() => {
                     let percent = ctx.percent;
@@ -399,9 +401,6 @@ pub(crate) mod drag_events {
     impl CallbackEvent<BarDragEventCtx<VolumeBarClickEvent>> for BarDragEvent
     {
         fn trigger(&mut self, ctx: &mut BarDragEventCtx<VolumeBarClickEvent>) -> JsResult<()> {
-            debug_console_log!("Trying to acquire mutex for: {:?}", self);
-            // debug_console_log!("Triggering volume bar drag event");
-            // let contex = ctx.borrow();
 
             match ctx.action_id {
                 id if id == TypeId::of::<MouseDown>() => {
@@ -409,17 +408,19 @@ pub(crate) mod drag_events {
                     debug_console_log!("Mouse down volume Percent: {}%", percent);
                     let video_mutex = ctx.video_player.borrow();
                     video_mutex.set_volume(percent);
-                    self.is_dragging = true;
+                    ctx.is_dragging.set(true);
                 }
                 id if id == TypeId::of::<MouseUp>() => {
                     debug_console_log!("Triggering progress volume mouse up");
-                    self.is_dragging = false;
+                    ctx.is_dragging.set(false);
                 }
-                id if id == TypeId::of::<MouseMove>() && self.is_dragging => {
-                    let percent = ctx.percent;
-                    debug_console_log!("Mouse move volume Percent: {}%", percent);
-                    let video_mutex = ctx.video_player.borrow();
-                    video_mutex.set_volume(percent);
+                id if id == TypeId::of::<MouseMove>() => {
+                    if ctx.is_dragging.get() {
+                        let percent = ctx.percent;
+                        debug_console_log!("Mouse move volume Percent: {}%", percent);
+                        let video_mutex = ctx.video_player.borrow();
+                        video_mutex.set_volume(percent);
+                    }
                 }
                 _ => {
                     return Err(JsValue::from_str("Callback play event has incorrect type"))
@@ -436,7 +437,7 @@ pub(crate) mod drag_events {
 
     impl BarDragEvent {
         pub fn new() -> Self {
-            Self { is_dragging: false }
+            Self {}
         }
     }
 }
