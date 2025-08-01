@@ -23,7 +23,7 @@ pub trait VideoInternal: Clone {
 
     fn get_video_length(&self) -> VideoResult<f64>;
 
-    fn set_video_progress(&self, progress: f64);
+    fn set_video_progress(&self, time: f64);
 
     fn ready(&self) -> bool;
 

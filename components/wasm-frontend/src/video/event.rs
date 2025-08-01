@@ -23,12 +23,6 @@ pub(crate) trait CallbackEvent<T>: Debug
     fn set_ctx(&mut self, percent: f64) {}
 }
 
-impl<T> Clone for Box<dyn CallbackEvent<T>> {
-    fn clone(&self) -> Self {
-        self.clone_box()
-    }
-}
-
 
 #[macro_export]
 macro_rules! callback_event {

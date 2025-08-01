@@ -98,7 +98,10 @@ where
 
 
     fn set_video_progress(&self, progress: f64) {
-        self.internal.set_video_progress(progress);
+        let duration = self.get_video_length();
+        let time = duration * progress;
+        self.internal.set_video_progress(time);
+        self.video_controller.update_progress(progress, duration)
     }
 
     fn set_volume(&self, volume: f64) {

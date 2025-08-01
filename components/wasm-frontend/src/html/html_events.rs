@@ -287,8 +287,10 @@ pub(crate) mod fast_forward_event {
 
 pub(crate) mod drag_events {
     use super::*;
-    use std::cell::RefCell;
+    use std::cell::{Cell, RefCell};
     use std::rc::Rc;
+
+    type Ctx = BarDragEventCtx<ProgressBarClickEvent>;
 
     #[derive(Debug, Clone)]
     pub(crate) struct ProgressBarClickEvent {}
@@ -321,13 +323,14 @@ pub(crate) mod drag_events {
         pub(crate) percent: f64,
         marker: PhantomData<T>,
         action_id: TypeId,
+        is_dragging: Rc<Cell<bool>>,
     }
 
     impl<T> BarDragEventCtx<T>
     where
         T: BarDraggable + 'static,
     {
-        pub(crate) fn new<A>(video_player: Rc<RefCell<Box<dyn VideoPlayerState>>>) -> Self
+        pub(crate) fn new<A>(video_player: Rc<RefCell<Box<dyn VideoPlayerState>>>, is_dragging: Rc<Cell<bool>>) -> Self
         where
             A: DragAction + 'static,
         {
@@ -336,6 +339,7 @@ pub(crate) mod drag_events {
                 percent: Default::default(),
                 marker: PhantomData,
                 action_id: TypeId::of::<A>(),
+                is_dragging,
             }
         }
     }
@@ -347,16 +351,47 @@ pub(crate) mod drag_events {
     }
 
 
-    impl CallbackEvent<BarDragEventCtx<ProgressBarClickEvent>> for BarDragEvent
+    impl CallbackEvent<Ctx> for BarDragEvent
     {
-        fn trigger(&mut self, ctx: &mut BarDragEventCtx<ProgressBarClickEvent>) -> JsResult<()> {
-            debug_console_log!("Triggering progress bar drag event");
+        fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
             debug_console_log!("Percent: {}", ctx.percent);
+
+            match ctx.action_id {
+                id if id == TypeId::of::<MouseDown>() => {
+                    let percent = ctx.percent;
+                    debug_console_log!("Progress mouse down Percent: {}%", percent);
+                    let video_mutex = ctx.video_player.borrow();
+                    video_mutex.set_video_progress(percent);
+                    // self.is_dragging = true;
+                    ctx.is_dragging.set(true);
+                    debug_console_log!("Setting is dragging to true");
+                }
+                id if id == TypeId::of::<MouseUp>() => {
+                    debug_console_log!("Triggering progress volume mouse up");
+                    ctx.is_dragging.set(false);
+                    // self.is_dragging = false;
+                }
+                id if id == TypeId::of::<MouseMove>() => {
+                    let percent = ctx.percent;
+                    debug_console_log!("Mouse move progress Percent: {}%", percent);
+                    if ctx.is_dragging.get() {
+                        debug_console_log!("Dragging mouse move is dragging is true");
+                        let video_mutex = ctx.video_player.borrow();
+                        video_mutex.set_video_progress(percent);
+                    } else {
+                        debug_console_log!("Dragging mouse move is dragging is false");
+                    }
+                }
+                _ => {
+                    error_log!("ctx.action_id is unknown, {:?}", std::any::type_name_of_val(&ctx.action_id));
+                    return Err(JsValue::from_str("Callback play event has incorrect type"))
+                }
+            }
 
             Ok(())
         }
 
-        fn clone_box(&self) -> Box<dyn CallbackEvent<BarDragEventCtx<ProgressBarClickEvent>>> {
+        fn clone_box(&self) -> Box<dyn CallbackEvent<Ctx>> {
             Box::new(self.clone())
         }
     }

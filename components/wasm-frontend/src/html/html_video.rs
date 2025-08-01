@@ -96,8 +96,8 @@ impl VideoInternal for HtmlVideoPlayerInternal {
         Ok(self.video_element.duration())
     }
 
-    fn set_video_progress(&self, progress: f64) {
-        self.video_element.set_current_time(progress);
+    fn set_video_progress(&self, time: f64) {
+        self.video_element.set_current_time(time);
     }
 
     fn ready(&self) -> bool {

@@ -39,7 +39,7 @@ body {
     height: 100%;
     background: #ff6b35;
     border-radius: 3px;
-    width: 2%;
+    width: 0;
     transition: width 0.1s ease;
 }
 
@@ -85,7 +85,7 @@ body {
     left: 0;
     right: 0;
     background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-    padding: 20px;
+    padding: 0 20px 20px 20px;
     display: flex;
     align-items: center;
     gap: 10px;

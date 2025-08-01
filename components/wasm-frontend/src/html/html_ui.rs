@@ -120,6 +120,8 @@ impl HtmlVideoUIController {
 
     const PROGRESS_FILL: &'static str = "progress-fill";
     const PROGRESS_LEFT: &'static str = "progress-handle";
+    const PROGRESS_START_DOT: &'static str = "start-dot";
+    const PROGRESS_END_DOT: &'static str = "end-dot";
 
     const SETTINGS_ICON_ID: &'static str = "settings-icon";
     const FULLSCREEN_ICON_ID: &'static str = "fullscreen-icon";

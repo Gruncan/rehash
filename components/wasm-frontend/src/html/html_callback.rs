@@ -3,7 +3,6 @@ use crate::html::html_callback::control_closure::ControlClosure;
 use crate::html::html_callback::keyboard_closure::KeyboardClosure;
 use crate::html::html_callback::progress_closure::create_progress_closures;
 use crate::html::html_callback::time_update_closure::TimeUpdateClosure;
-use crate::html::html_callback::volume_closure::create_volume_closures;
 use crate::html::html_events::drag_events::{BarDragEvent, BarDragEventCtx, MouseDown, MouseMove, MouseUp, ProgressBarClickEvent, VolumeBarClickEvent};
 use crate::html::html_events::fast_forward_event::FastForwardEvent;
 use crate::html::html_events::fullscreen_event::FullScreenEvent;
@@ -19,7 +18,7 @@ use crate::video::event::{CallbackController, CallbackEvent};
 use crate::video::video_callback::CallbackClosureWrapper;
 use crate::video::video_callback::SharedVideoPlayer;
 use crate::video::video_ui::VideoUIRegister;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
@@ -115,25 +114,29 @@ impl CallbackController for HtmlVideoCallbackController {
         let instance = Rc::new(RefCell::new(mutex.clone_box()));
 
 
-        let mouse_up_volume_closure = create_volume_closures::<MouseUp>(instance.clone(), volume_drag_event.clone());
-        self.ui_controller.register_element_event_listener_specific("mouseup", Self::VOLUME_ID, mouse_up_volume_closure);
-
-        let mouse_down_volume_closure = create_volume_closures::<MouseDown>(instance.clone(), volume_drag_event.clone());
-        self.ui_controller.register_element_event_listener_specific("mousedown", Self::VOLUME_ID, mouse_down_volume_closure);
-
-        let mouse_move_volume_closure = create_volume_closures::<MouseMove>(instance.clone(), volume_drag_event.clone());
-        self.ui_controller.register_element_event_listener_specific("mousemove", Self::VOLUME_ID, mouse_move_volume_closure);
+        // let mouse_up_volume_closure = create_volume_closures::<MouseUp>(instance.clone(), volume_drag_event.clone());
+        // self.ui_controller.register_element_event_listener_specific("mouseup", Self::VOLUME_ID, mouse_up_volume_closure);
+        //
+        // let mouse_down_volume_closure = create_volume_closures::<MouseDown>(instance.clone(), volume_drag_event.clone());
+        // self.ui_controller.register_element_event_listener_specific("mousedown", Self::VOLUME_ID, mouse_down_volume_closure);
+        //
+        // let mouse_move_volume_closure = create_volume_closures::<MouseMove>(instance.clone(), volume_drag_event.clone());
+        // self.ui_controller.register_element_event_listener_specific("mousemove", Self::VOLUME_ID, mouse_move_volume_closure);
 
 
         let progress_drag_event = self.callback_progress_drag_event.borrow().clone_box();
-        let mouse_up_progress_closure = create_progress_closures::<MouseUp>(instance.clone(), progress_drag_event.clone());
+        let is_dragging = Rc::new(Cell::new(false));
+        // let drag_event = Arc::new(progress_drag_event);
+        let mouse_up_progress_closure = create_progress_closures::<MouseUp>(instance.clone(), is_dragging.clone(), progress_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mouseup", Self::PROGRESS_BAR_ID, mouse_up_progress_closure);
 
-        let mouse_down_progress_closure = create_progress_closures::<MouseDown>(instance.clone(), progress_drag_event.clone());
+        let mouse_down_progress_closure = create_progress_closures::<MouseDown>(instance.clone(), is_dragging.clone(), progress_drag_event.clone_box());
         self.ui_controller.register_element_event_listener_specific("mousedown", Self::PROGRESS_BAR_ID, mouse_down_progress_closure);
 
-        let mouse_move_volume_closure = create_progress_closures::<MouseMove>(instance.clone(), progress_drag_event.clone());
-        self.ui_controller.register_element_event_listener_specific("mousemove", Self::VOLUME_ID, mouse_move_volume_closure);
+        let mouse_move_volume_closure = create_progress_closures::<MouseMove>(instance.clone(), is_dragging.clone(), progress_drag_event.clone_box());
+        self.ui_controller.register_element_event_listener_specific("mousemove", Self::PROGRESS_BAR_ID, mouse_move_volume_closure);
+
+        debug_console_log!("Registered callback handler");
     }
 }
 
@@ -143,6 +146,7 @@ mod volume_closure {
     use crate::html::html_events::drag_events::DragAction;
     use crate::log_to_tauri;
     use crate::video::video_callback::{CallbackClosureWrapper, VideoPlayerState};
+    use std::cell::Cell;
     use std::fmt::{Debug, Formatter};
     use web_sys::HtmlElement;
 
@@ -189,11 +193,11 @@ mod volume_closure {
     }
 
     #[inline]
-    pub fn create_volume_closures<T>(video_player: Rc<RefCell<Box<dyn VideoPlayerState>>>, callback: Callback) -> Closure<web_sys::MouseEvent>
+    pub fn create_volume_closures<T>(video_player: Rc<RefCell<Box<dyn VideoPlayerState>>>, is_dragging: Rc<Cell<bool>>, callback: Callback) -> Closure<web_sys::MouseEvent>
     where
         T: DragAction + 'static,
     {
-        let ctx = BarDragEventCtx::new::<T>(video_player);
+        let ctx = BarDragEventCtx::new::<T>(video_player, is_dragging);
         let ref_closure_wrapper = Box::new(VolumeBarDragClosure::new(ctx, callback));
         CallbackClosureWrapper::create_callback(ref_closure_wrapper)
     }
@@ -204,6 +208,7 @@ mod progress_closure {
     use crate::html::html_events::drag_events::DragAction;
     use crate::log_to_tauri;
     use crate::video::video_callback::{CallbackClosureWrapper, VideoPlayerState};
+    use std::cell::Cell;
     use web_sys::HtmlElement;
 
     type Ctx = BarDragEventCtx<ProgressBarClickEvent>;
@@ -244,11 +249,11 @@ mod progress_closure {
     }
 
     #[inline]
-    pub fn create_progress_closures<T>(video_player: Rc<RefCell<Box<dyn VideoPlayerState>>>, callback: Callback) -> Closure<web_sys::MouseEvent>
+    pub fn create_progress_closures<T>(video_player: Rc<RefCell<Box<dyn VideoPlayerState>>>, is_dragging: Rc<Cell<bool>>, callback: Callback) -> Closure<web_sys::MouseEvent>
     where
         T: DragAction + 'static,
     {
-        let ctx = BarDragEventCtx::new::<T>(video_player);
+        let ctx = BarDragEventCtx::new::<T>(video_player, is_dragging);
         let ref_closure_wrapper = Box::new(ProgressBarDragClosure::new(ctx, callback));
         CallbackClosureWrapper::create_callback(ref_closure_wrapper)
     }
