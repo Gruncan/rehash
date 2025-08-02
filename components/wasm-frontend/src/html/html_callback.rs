@@ -125,7 +125,7 @@ impl CallbackController for HtmlVideoCallbackController {
                                                                                          &volume_bar_element);
         self.ui_controller.register_element_event_listener_specific("mousedown", Self::VOLUME_ID, mouse_down_volume_closure);
 
-        let mouse_move_volume_closure = create_closure::<MouseDown, VolumeBarClickEvent>(self.video_player.clone(),
+        let mouse_move_volume_closure = create_closure::<MouseMove, VolumeBarClickEvent>(self.video_player.clone(),
                                                                                          is_dragging_volume.clone(),
                                                                                          volume_drag_event.clone_box(),
                                                                                          &volume_bar_element);
