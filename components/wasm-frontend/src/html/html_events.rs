@@ -406,11 +406,12 @@ pub(crate) mod drag_events {
         I: VideoInternal + 'static + Debug,
     {
         fn trigger(&mut self, ctx: &mut BarDragEventCtx<VolumeBarClickEvent>) -> JsResult<()> {
-            debug_console_log!("Volume drag state: {}", ctx.is_dragging.get());
+
             match ctx.action_id {
                 id if id == TypeId::of::<MouseDown>() => {
                     let percent = ctx.percent;
                     debug_console_log!("Mouse down volume Percent: {}%", percent);
+                    debug_console_log!("Volume drag state: {}", ctx.is_dragging.get());
                     let video_mutex = ctx.video_player.borrow();
                     video_mutex.set_volume(percent);
                     ctx.is_dragging.set(true);
@@ -442,7 +443,22 @@ pub(crate) mod drag_events {
     {
         fn trigger(&mut self, ctx: &mut BarDragEventCtx<EndClipDot>) -> JsResult<()> {
             debug_console_log!("EndClipDot drag state: {}", ctx.is_dragging.get());
-
+            match ctx.action_id {
+                id if id == TypeId::of::<MouseDown>() => {
+                    let percent = ctx.percent;
+                    debug_console_log!("Mouse down End dot clip Percent: {}%", percent);
+                    ctx.is_dragging.set(true);
+                }
+                id if id == TypeId::of::<MouseMove>() => {
+                    if ctx.is_dragging.get() {
+                        let percent = ctx.percent;
+                        debug_console_log!("End dot Mouse move volume Percent: {}%", percent);
+                    }
+                }
+                _ => {
+                    return Err(JsValue::from_str("Callback play event has incorrect type"))
+                }
+            }
             Ok(())
         }
 
@@ -457,7 +473,22 @@ pub(crate) mod drag_events {
     {
         fn trigger(&mut self, ctx: &mut BarDragEventCtx<StartClipDot>) -> JsResult<()> {
             debug_console_log!("StartClipDot drag state: {}", ctx.is_dragging.get());
-
+            match ctx.action_id {
+                id if id == TypeId::of::<MouseDown>() => {
+                    let percent = ctx.percent;
+                    debug_console_log!("Mouse down Start dot clip Percent: {}%", percent);
+                    ctx.is_dragging.set(true);
+                }
+                id if id == TypeId::of::<MouseMove>() => {
+                    if ctx.is_dragging.get() {
+                        let percent = ctx.percent;
+                        debug_console_log!("Start dot Mouse move volume Percent: {}%", percent);
+                    }
+                }
+                _ => {
+                    return Err(JsValue::from_str("Callback play event has incorrect type"))
+                }
+            }
 
             Ok(())
         }
@@ -506,6 +537,7 @@ pub(crate) mod drag_events_exit {
 
     impl CallbackEvent<Ctx> for DragEventExit {
         fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
+            debug_console_log!("Mouse up setting to false");
             for event_exit_cell in &ctx.drag_event_cells {
                 event_exit_cell.set(false);
             }

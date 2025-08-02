@@ -31,6 +31,8 @@ pub trait VideoInternal: Clone {
 
 }
 
+pub trait VideoNotInit {}
+
 
 pub(crate) struct InternalVideoError(pub String);
 

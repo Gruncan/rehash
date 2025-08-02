@@ -183,4 +183,8 @@ impl HtmlVideoUIController {
             volume_fill,
         }
     }
+
+    pub fn get_document(&self) -> &Document {
+        &self.document
+    }
 }
