@@ -48,6 +48,16 @@ pub trait VideoPlayerState: Debug {
 
     fn set_volume(&self, volume: f64);
 
+    fn set_min_progress(&mut self, percent: f64);
+
+    fn set_max_progress(&mut self, percent: f64);
+
+    fn increment_video_speed(&mut self);
+
+    fn decrement_video_speed(&mut self);
+
+    fn get_playback_speed(&self) -> f64;
+
     fn clone_box(&self) -> Box<dyn VideoPlayerState>;
 
     fn get_type_id(&self) -> TypeId;
@@ -89,7 +99,7 @@ where
     }
 
     fn get_video_length(&self) -> f64 {
-        self.internal.get_video_length().expect("Failed to get video length")
+        self.internal.get_video_length()
     }
 
     fn set_video_time(&self) {
@@ -111,12 +121,32 @@ where
         self.video_controller.update_volume(volume);
     }
 
+    fn set_min_progress(&mut self, percent: f64) {
+        self.internal.set_min_progress(percent);
+    }
+
+    fn set_max_progress(&mut self, percent: f64) {
+        self.internal.set_max_progress(percent);
+    }
+
     fn clone_box(&self) -> Box<dyn VideoPlayerState> {
         Box::new(self.clone())
     }
 
     fn get_type_id(&self) -> TypeId {
         self.type_id
+    }
+
+    fn increment_video_speed(&mut self) {
+        self.internal.increment_video_speed()
+    }
+
+    fn decrement_video_speed(&mut self) {
+        self.internal.decrement_video_speed()
+    }
+
+    fn get_playback_speed(&self) -> f64 {
+        todo!()
     }
 }
 

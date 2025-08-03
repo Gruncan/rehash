@@ -10,6 +10,7 @@ use crate::html::html_events::fast_forward_event::FastForwardEvent;
 use crate::html::html_events::fullscreen_event::FullScreenEvent;
 use crate::html::html_events::mute_unmute_event::MuteUnmuteEvent;
 use crate::html::html_events::play_pause_event::PlayPauseEvent;
+use crate::html::html_events::playback_speed_increase::{PlaybackDecreaseAction, PlaybackIncreaseAction, PlaybackSpeedEvent};
 use crate::html::html_events::progress_bar_change_event::ProgressBarChangeEvent;
 use crate::html::html_events::rewind_event::RewindEvent;
 use crate::html::html_events::settings_event::SettingsEvent;
@@ -63,11 +64,16 @@ impl HtmlVideoCallbackController {
         let fast_forward_event: crate::html::html_video::Event = callback_event!(FastForwardEvent);
         let rewind_event: crate::html::html_video::Event = callback_event!(RewindEvent);
 
+        let playback_increase = callback_event!(PlaybackSpeedEvent<PlaybackIncreaseAction>);
+        let playback_decrease = callback_event!(PlaybackSpeedEvent<PlaybackDecreaseAction>);
+
         let keyboard_events: HashMap<String, crate::html::html_video::Event> = HashMap::from([
             ("p".to_string(), play_pause_event.clone()),
             ("m".to_string(), mute_unmute_event.clone()),
             ("ArrowRight".to_string(), fast_forward_event.clone()),
             ("ArrowLeft".to_string(), rewind_event.clone()),
+            ("ArrowUp".to_string(), playback_increase.clone()),
+            ("ArrowDown".to_string(), playback_decrease.clone()),
         ]);
 
         let control_events: HashMap<String, crate::html::html_video::Event> = HashMap::from([

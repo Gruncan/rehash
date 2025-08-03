@@ -448,6 +448,7 @@ pub(crate) mod drag_events {
                     let percent = ctx.percent;
                     debug_console_log!("Mouse down End dot clip Percent: {}%", percent);
                     ctx.is_dragging.set(true);
+                    ctx.video_player.borrow_mut().set_max_progress(percent);
                 }
                 id if id == TypeId::of::<MouseMove>() => {
                     if ctx.is_dragging.get() {
@@ -478,6 +479,7 @@ pub(crate) mod drag_events {
                     let percent = ctx.percent;
                     debug_console_log!("Mouse down Start dot clip Percent: {}%", percent);
                     ctx.is_dragging.set(true);
+                    ctx.video_player.borrow_mut().set_min_progress(percent);
                 }
                 id if id == TypeId::of::<MouseMove>() => {
                     if ctx.is_dragging.get() {
@@ -552,6 +554,68 @@ pub(crate) mod drag_events_exit {
     impl DragEventExit {
         pub fn new() -> Self {
             Self {}
+        }
+    }
+}
+
+
+pub(crate) mod playback_speed_increase {
+    use super::*;
+
+    #[derive(Debug, Clone)]
+    pub(crate) enum PlaybackIncreaseAction {}
+
+    #[derive(Debug, Clone)]
+    pub(crate) enum PlaybackDecreaseAction {}
+
+    pub(crate) trait PlaybackSpeedAction {}
+
+    impl PlaybackSpeedAction for PlaybackIncreaseAction {}
+    impl PlaybackSpeedAction for PlaybackDecreaseAction {}
+
+    #[derive(Debug, Clone)]
+    pub(crate) struct PlaybackSpeedEvent<A>
+    where
+        A: PlaybackSpeedAction + 'static,
+    {
+        marker: PhantomData<A>,
+        type_id: TypeId,
+    }
+
+
+    impl<A> CallbackEvent<SharedVideoPlayer> for PlaybackSpeedEvent<A>
+    where
+        A: PlaybackSpeedAction + Debug + Clone + 'static,
+    {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+            let mut video_player = ctx.borrow_mut();
+            if self.type_id == TypeId::of::<PlaybackIncreaseAction>() {
+                debug_console_log!("Increasing playback");
+                video_player.increment_video_speed();
+            } else if self.type_id == TypeId::of::<PlaybackDecreaseAction>() {
+                debug_console_log!("Decreasing playback");
+                video_player.decrement_video_speed();
+            } else {
+                return Err(JsValue::from_str("Callback play event has incorrect type"))
+            }
+            Ok(())
+        }
+
+        fn clone_box(&self) -> Box<dyn CallbackEvent<SharedVideoPlayer>> {
+            Box::new(self.clone())
+        }
+    }
+
+    impl<A> PlaybackSpeedEvent<A>
+    where
+        A: PlaybackSpeedAction + Debug + Clone + 'static,
+    {
+        pub fn new() -> Self
+        {
+            Self {
+                marker: PhantomData,
+                type_id: TypeId::of::<A>(),
+            }
         }
     }
 }
