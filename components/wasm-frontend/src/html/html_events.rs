@@ -559,7 +559,7 @@ pub(crate) mod drag_events_exit {
 }
 
 
-pub(crate) mod playback_speed_increase {
+pub(crate) mod playback_speed_event {
     use super::*;
 
     #[derive(Debug, Clone)]

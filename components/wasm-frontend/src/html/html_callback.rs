@@ -10,7 +10,7 @@ use crate::html::html_events::fast_forward_event::FastForwardEvent;
 use crate::html::html_events::fullscreen_event::FullScreenEvent;
 use crate::html::html_events::mute_unmute_event::MuteUnmuteEvent;
 use crate::html::html_events::play_pause_event::PlayPauseEvent;
-use crate::html::html_events::playback_speed_increase::{PlaybackDecreaseAction, PlaybackIncreaseAction, PlaybackSpeedEvent};
+use crate::html::html_events::playback_speed_event::{PlaybackDecreaseAction, PlaybackIncreaseAction, PlaybackSpeedEvent};
 use crate::html::html_events::progress_bar_change_event::ProgressBarChangeEvent;
 use crate::html::html_events::rewind_event::RewindEvent;
 use crate::html::html_events::settings_event::SettingsEvent;
