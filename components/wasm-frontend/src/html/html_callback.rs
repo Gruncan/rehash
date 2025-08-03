@@ -4,7 +4,7 @@ use crate::html::html_callback::drag_closure::create_closure;
 use crate::html::html_callback::drag_exit_closure::DragExitClosure;
 use crate::html::html_callback::keyboard_closure::KeyboardClosure;
 use crate::html::html_callback::time_update_closure::TimeUpdateClosure;
-use crate::html::html_events::drag_events::{BarDragEvent, BarDragEventCtx, MouseDown, MouseMove, ProgressBarClickEvent, VolumeBarClickEvent};
+use crate::html::html_events::drag_events::{BarDragEvent, BarDragEventCtx, EndClipDot, MouseDown, MouseMove, ProgressBarClickEvent, StartClipDot, VolumeBarClickEvent};
 use crate::html::html_events::drag_events_exit::{DragEventExit, DragEventExitCtx};
 use crate::html::html_events::fast_forward_event::FastForwardEvent;
 use crate::html::html_events::fullscreen_event::FullScreenEvent;
@@ -150,24 +150,24 @@ impl CallbackController for HtmlVideoCallbackController {
         self.ui_controller.register_element_event_listener_specific("mousemove", Self::PROGRESS_BAR_ID, mouse_move_progress_closure);
 
 
-        // let start_dot_drag_event = callback_event!(BarDragEvent<HtmlVideoPlayerInternal>).borrow().clone_box();
-        // let is_dragging_start_dot = Rc::new(Cell::new(false));
+        let start_dot_drag_event = callback_event!(BarDragEvent<HtmlVideoPlayerInternal>).borrow().clone_box();
+        let is_dragging_start_dot = Rc::new(Cell::new(false));
 
-        // let mouse_down_start_dot_closure = create_closure::<MouseDown, StartClipDot>(self.video_player.clone(), is_dragging_start_dot.clone(), start_dot_drag_event.clone_box(), &progress_bar_element);
-        // self.ui_controller.register_element_event_listener_specific("mousedown", Self::START_DOT_ID, mouse_down_start_dot_closure);
-        //
-        // let mouse_move_start_dot_closure = create_closure::<MouseMove, StartClipDot>(self.video_player.clone(), is_dragging_start_dot.clone(), start_dot_drag_event.clone_box(), &progress_bar_element);
-        // self.ui_controller.register_element_event_listener_specific("mousemove", Self::START_DOT_ID, mouse_move_start_dot_closure);
-        //
-        //
-        // let end_dot_drag_event = callback_event!(BarDragEvent<HtmlVideoPlayerInternal>).borrow().clone_box();
-        // let is_dragging_end_dot = Rc::new(Cell::new(false));
-        //
-        // let mouse_down_end_dot_closure = create_closure::<MouseDown, EndClipDot>(self.video_player.clone(), is_dragging_end_dot.clone(), end_dot_drag_event.clone_box(), &progress_bar_element);
-        // self.ui_controller.register_element_event_listener_specific("mousedown", Self::END_DOT_ID, mouse_down_end_dot_closure);
-        //
-        // let mouse_move_end_dot_closure = create_closure::<MouseMove, EndClipDot>(self.video_player.clone(), is_dragging_end_dot.clone(), end_dot_drag_event.clone_box(), &progress_bar_element);
-        // self.ui_controller.register_element_event_listener_specific("mousemove", Self::END_DOT_ID, mouse_move_end_dot_closure);
+        let mouse_down_start_dot_closure = create_closure::<MouseDown, StartClipDot>(self.video_player.clone(), is_dragging_start_dot.clone(), start_dot_drag_event.clone_box(), &progress_bar_element);
+        self.ui_controller.register_element_event_listener_specific("mousedown", Self::START_DOT_ID, mouse_down_start_dot_closure);
+
+        let mouse_move_start_dot_closure = create_closure::<MouseMove, StartClipDot>(self.video_player.clone(), is_dragging_start_dot.clone(), start_dot_drag_event.clone_box(), &progress_bar_element);
+        self.ui_controller.register_element_event_listener_specific("mousemove", Self::START_DOT_ID, mouse_move_start_dot_closure);
+
+
+        let end_dot_drag_event = callback_event!(BarDragEvent<HtmlVideoPlayerInternal>).borrow().clone_box();
+        let is_dragging_end_dot = Rc::new(Cell::new(false));
+
+        let mouse_down_end_dot_closure = create_closure::<MouseDown, EndClipDot>(self.video_player.clone(), is_dragging_end_dot.clone(), end_dot_drag_event.clone_box(), &progress_bar_element);
+        self.ui_controller.register_element_event_listener_specific("mousedown", Self::END_DOT_ID, mouse_down_end_dot_closure);
+
+        let mouse_move_end_dot_closure = create_closure::<MouseMove, EndClipDot>(self.video_player.clone(), is_dragging_end_dot.clone(), end_dot_drag_event.clone_box(), &progress_bar_element);
+        self.ui_controller.register_element_event_listener_specific("mousemove", Self::END_DOT_ID, mouse_move_end_dot_closure);
 
 
         let drag_exit = Box::new(
