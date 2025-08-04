@@ -25,6 +25,8 @@ pub(crate) struct HtmlVideoUIController {
     fast_forward_icon: SvgElement,
     rewind_icon: SvgElement,
     volume_fill: HtmlDivElement,
+    start_dot: HtmlDivElement,
+    end_dot: HtmlDivElement,
 
 }
 
@@ -68,6 +70,17 @@ impl VideoUIController<HtmlVideoPlayerInternal> for HtmlVideoUIController {
         self.volume_fill.style().set_property("width", format!("{}%", volume * 100f64).as_str())
             .expect("Failed to set volume");
     }
+
+    fn update_start_dot_position(&self, start_position: f64) {
+        debug_console_log!("Setting starting position to {}", start_position);
+        self.start_dot.style().set_property("left", format!("{}%", start_position).as_str())
+            .expect("Failed to set start_dot");
+    }
+
+    fn update_end_dot_position(&self, end_position: f64) {
+        self.end_dot.style().set_property("right", format!("{}%", end_position).as_str())
+            .expect("Failed to set end_dot");
+    }
 }
 
 #[inline]
@@ -101,16 +114,16 @@ impl VideoUIRegister for HtmlVideoUIController {
         closure.forget();
     }
 
-    fn register_doc_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>) {
-        self.document.add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
-            .expect("Failed to register global event listener");
-        closure.forget();
-    }
-
     fn register_element_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, id: &str, closure: Box<Closure<T>>) {
         self.document.get_element_by_id(id).expect(format!("Failed to find element with id {}", id).as_str())
             .add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
             .expect("Failed to register element event listener");
+        closure.forget();
+    }
+
+    fn register_doc_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>) {
+        self.document.add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
+            .expect("Failed to register global event listener");
         closure.forget();
     }
 }
@@ -162,6 +175,9 @@ impl HtmlVideoUIController {
 
         let volume_fill = get_element_as!(&document, Self::VOLUME_FILL_ID, HtmlDivElement);
 
+        let start_dot = get_element_as!(&document, Self::PROGRESS_START_DOT, HtmlDivElement);
+        let end_dot = get_element_as!(&document, Self::PROGRESS_END_DOT, HtmlDivElement);
+
         let video_element = get_element_as!(&document, Self::VIDEO_ID, HtmlVideoElement);
 
 
@@ -181,6 +197,8 @@ impl HtmlVideoUIController {
             fast_forward_icon,
             rewind_icon,
             volume_fill,
+            start_dot,
+            end_dot,
         }
     }
 

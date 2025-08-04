@@ -123,10 +123,16 @@ where
 
     fn set_min_progress(&mut self, percent: f64) {
         self.internal.set_min_progress(percent);
+        let duration = self.get_video_length();
+        let time = duration * percent;
+        self.video_controller.update_start_dot_position(time)
     }
 
     fn set_max_progress(&mut self, percent: f64) {
         self.internal.set_max_progress(percent);
+        let duration = self.get_video_length();
+        let time = duration - (duration * percent);
+        self.video_controller.update_end_dot_position(time)
     }
 
     fn clone_box(&self) -> Box<dyn VideoPlayerState> {

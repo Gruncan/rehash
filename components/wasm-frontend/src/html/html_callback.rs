@@ -1,19 +1,5 @@
 use crate::callback_event;
-use crate::html::html_callback::control_closure::ControlClosure;
-use crate::html::html_callback::drag_closure::create_closure;
-use crate::html::html_callback::drag_exit_closure::DragExitClosure;
-use crate::html::html_callback::keyboard_closure::KeyboardClosure;
-use crate::html::html_callback::time_update_closure::TimeUpdateClosure;
-use crate::html::html_events::drag_events::{BarDragEvent, BarDragEventCtx, EndClipDot, MouseDown, MouseMove, ProgressBarClickEvent, StartClipDot, VolumeBarClickEvent};
-use crate::html::html_events::drag_events_exit::{DragEventExit, DragEventExitCtx};
-use crate::html::html_events::fast_forward_event::FastForwardEvent;
-use crate::html::html_events::fullscreen_event::FullScreenEvent;
-use crate::html::html_events::mute_unmute_event::MuteUnmuteEvent;
-use crate::html::html_events::play_pause_event::PlayPauseEvent;
-use crate::html::html_events::playback_speed_event::{PlaybackDecreaseAction, PlaybackIncreaseAction, PlaybackSpeedEvent};
-use crate::html::html_events::progress_bar_change_event::ProgressBarChangeEvent;
-use crate::html::html_events::rewind_event::RewindEvent;
-use crate::html::html_events::settings_event::SettingsEvent;
+use crate::html::html_events::*;
 use crate::html::html_ui::HtmlVideoUIController;
 use crate::html::html_video::HtmlVideoPlayerInternal;
 use crate::prelude::*;
@@ -26,6 +12,13 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlElement};
+
+pub(crate) use control_closure::*;
+pub(crate) use drag_closure::*;
+pub(crate) use drag_exit_closure::*;
+pub(crate) use keyboard_closure::*;
+pub(crate) use time_update_closure::*;
+
 
 pub(crate) struct HtmlVideoCallbackController {
     video_player: SharedVideoPlayer,
@@ -171,7 +164,7 @@ impl CallbackController for HtmlVideoCallbackController {
 
 
         let drag_exit = Box::new(
-            DragExitClosure::new(DragEventExitCtx::new(vec![is_dragging_volume, is_dragging_progress, /*is_dragging_start_dot, is_dragging_end_dot*/]),
+            DragExitClosure::new(DragEventExitCtx::new(vec![is_dragging_volume, is_dragging_progress, is_dragging_start_dot, is_dragging_end_dot]),
                                  Rc::new(RefCell::new(DragEventExit::new())))
         );
         let drag_exit_closure = CallbackClosureWrapper::create_callback(drag_exit);
@@ -256,7 +249,6 @@ mod drag_closure {
         CallbackClosureWrapper::create_callback(ref_closure_wrapper)
     }
 }
-
 
 mod time_update_closure {
     use super::*;

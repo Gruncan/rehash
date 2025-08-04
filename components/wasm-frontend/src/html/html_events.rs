@@ -10,6 +10,17 @@ use wasm_bindgen::JsValue;
 use wasm_bindings_lib::debug_console_log;
 
 pub use crate::prelude::*;
+pub(crate) use drag_events::*;
+pub(crate) use drag_events_exit::*;
+pub(crate) use fast_forward_event::*;
+pub(crate) use fullscreen_event::*;
+pub(crate) use mute_unmute_event::*;
+pub(crate) use play_pause_event::*;
+pub(crate) use playback_speed_event::*;
+pub(crate) use progress_bar_change_event::*;
+pub(crate) use rewind_event::*;
+pub(crate) use settings_event::*;
+
 
 fn get_video_player_state_return<I, S>(video_result: VideoPlayerResult<I, S>) -> Box<dyn VideoPlayerState>
 where
@@ -485,6 +496,7 @@ pub(crate) mod drag_events {
                     if ctx.is_dragging.get() {
                         let percent = ctx.percent;
                         debug_console_log!("Start dot Mouse move volume Percent: {}%", percent);
+                        ctx.video_player.borrow_mut().set_min_progress(percent);
                     }
                 }
                 _ => {
@@ -557,7 +569,6 @@ pub(crate) mod drag_events_exit {
         }
     }
 }
-
 
 pub(crate) mod playback_speed_event {
     use super::*;

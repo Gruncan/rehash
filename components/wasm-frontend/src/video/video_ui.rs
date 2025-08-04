@@ -17,6 +17,10 @@ where
     fn update_progress(&self, progress: f64, duration: f64);
 
     fn update_volume(&self, volume: f64);
+
+    fn update_start_dot_position(&self, start_position: f64);
+
+    fn update_end_dot_position(&self, end_position: f64);
 }
 
 pub(crate) trait VideoUIRegister {
