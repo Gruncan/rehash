@@ -48,9 +48,6 @@ pub(crate) mod file_open_event {
             Ok(())
         }
 
-        fn clone_box(&self) -> Box<dyn CallbackEvent<FileOpenEventCtxType>> {
-            Box::new(self.clone())
-        }
     }
 
     impl FileOpenEvent {

@@ -270,8 +270,15 @@ pub(crate) mod drag_events {
     use crate::video::event::CallbackEvent;
     use crate::video::video_callback::{SharedVideoPlayer, VideoPlayerState};
     use crate::JsResult;
-    use std::cell::Cell;
+    use std::cell::{Cell, RefCell};
     use std::rc::Rc;
+
+    const PROGRESS_BAR_ID: &'static str = "progress-bar";
+    const VOLUME_ID: &'static str = "volume-slider";
+    const START_DOT_ID: &'static str = "start-dot";
+    const END_DOT_ID: &'static str = "end-dot";
+
+
 
     #[derive(Debug, Copy, Clone)]
     pub(crate) enum CurrentlyMoving {
@@ -279,16 +286,47 @@ pub(crate) mod drag_events {
         ProgressBar,
         StartClipDot,
         EndClipDot,
-        Volume,
+        VolumeBar,
     }
+
+    impl From<&str> for CurrentlyMoving {
+        fn from(value: &str) -> Self {
+            match value {
+                PROGRESS_BAR_ID => CurrentlyMoving::ProgressBar,
+                START_DOT_ID => CurrentlyMoving::StartClipDot,
+                END_DOT_ID => CurrentlyMoving::EndClipDot,
+                VOLUME_ID => CurrentlyMoving::VolumeBar,
+                _ => CurrentlyMoving::Nothing,
+            }
+        }
+    }
+
+    impl TryFrom<CurrentlyMoving> for &str {
+        type Error = ();
+
+        fn try_from(value: CurrentlyMoving) -> Result<Self, Self::Error> {
+            match value {
+                CurrentlyMoving::ProgressBar => Ok(PROGRESS_BAR_ID),
+                CurrentlyMoving::StartClipDot => Ok(START_DOT_ID),
+                CurrentlyMoving::EndClipDot => Ok(END_DOT_ID),
+                CurrentlyMoving::VolumeBar => Ok(VOLUME_ID),
+                _ => Err(())
+            }
+        }
+    }
+
+
 
     type MovingCtx = Rc<Cell<CurrentlyMoving>>;
 
+    pub(crate) type DragEventCtxType = Rc<RefCell<DragEventCtx>>;
 
+    #[derive(Debug, Clone)]
     pub(crate) struct DragEventCtx {
         currently_moving: MovingCtx,
         video_player: SharedVideoPlayer,
         percent: f64,
+        clicked: CurrentlyMoving,
     }
 
     impl DragEventCtx {
@@ -296,7 +334,8 @@ pub(crate) mod drag_events {
             Self {
                 video_player,
                 currently_moving: Rc::new(Cell::new(CurrentlyMoving::Nothing)),
-                percent: 0f64
+                percent: 0f64,
+                clicked: CurrentlyMoving::Nothing,
             }
         }
 
@@ -307,15 +346,20 @@ pub(crate) mod drag_events {
         pub fn set_moving(&self, moving_type: CurrentlyMoving) {
             self.currently_moving.set(moving_type)
         }
+
+        pub fn set_clicked(&mut self, clicked: CurrentlyMoving) {
+            self.clicked = clicked
+        }
     }
 
-    type Ctx = DragEventCtx;
+    type Ctx = DragEventCtxType;
 
     #[derive(Debug, Clone)]
     pub(crate) struct DragMoveEvent {}
 
     impl CallbackEvent<Ctx> for DragMoveEvent {
         fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
+            let ctx = ctx.borrow();
             match ctx.currently_moving.get() {
                 CurrentlyMoving::Nothing => {},
                 CurrentlyMoving::ProgressBar => {
@@ -327,7 +371,7 @@ pub(crate) mod drag_events {
                 CurrentlyMoving::EndClipDot => {
                     ctx.video_player.borrow_mut().set_max_progress(ctx.percent);
                 },
-                CurrentlyMoving::Volume => {
+                CurrentlyMoving::VolumeBar => {
                     let video_mutex = ctx.video_player.borrow();
                     video_mutex.set_volume(ctx.percent);
                 },
@@ -343,8 +387,8 @@ pub(crate) mod drag_events {
 
     impl CallbackEvent<Ctx> for DragClickEvent {
         fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
-            // I need the enum for what was clicked here.
-            ctx.set_moving(CurrentlyMoving::ProgressBar);
+            let ctx = ctx.borrow();
+            ctx.set_moving(ctx.clicked);
             match ctx.currently_moving.get() {
                 CurrentlyMoving::Nothing => {},
                 CurrentlyMoving::ProgressBar => {
@@ -356,7 +400,7 @@ pub(crate) mod drag_events {
                 CurrentlyMoving::EndClipDot => {
                     ctx.video_player.borrow_mut().set_max_progress(ctx.percent);
                 },
-                CurrentlyMoving::Volume => {
+                CurrentlyMoving::VolumeBar => {
                     let video_mutex = ctx.video_player.borrow();
                     video_mutex.set_volume(ctx.percent);
                 },
@@ -366,10 +410,11 @@ pub(crate) mod drag_events {
     }
 
     #[derive(Debug, Clone)]
-    pub(crate) struct DragEventExit {}
+    pub(crate) struct DragExitEvent {}
 
-    impl CallbackEvent<Ctx> for DragEventExit {
+    impl CallbackEvent<Ctx> for DragExitEvent {
         fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
+            let ctx = ctx.borrow();
             ctx.set_moving(CurrentlyMoving::Nothing);
             Ok(())
         }
