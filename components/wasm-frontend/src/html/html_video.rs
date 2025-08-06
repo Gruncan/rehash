@@ -102,6 +102,7 @@ impl VideoInternal for HtmlVideoPlayerInternal {
     fn set_video_progress(&self, time: f64) {
         let max_duration = self.max_video_progress.time;
         let min_duration = self.min_video_progress.time;
+        debug_console_log!("Time {} | max {} | min {}", time, max_duration, min_duration);
         if time >= max_duration {
             self.video_element.set_current_time(max_duration);
             debug_console_log!("Set to max duration: {}", max_duration);
@@ -138,12 +139,13 @@ impl VideoInternal for HtmlVideoPlayerInternal {
 
     fn set_max_progress(&mut self, percent: f64) {
         let length = self.get_video_length();
+        debug_console_log!("Max progress percent {}", percent);
         let time = length * percent;
         debug_console_log!("Time: {}", time);
         debug_console_log!("min time: {:?}", self.min_video_progress);
         if time - 1f64 > self.min_video_progress.time {
             debug_console_log!("Max progress set to: {}", percent);
-            self.max_video_progress = ProgressBound { percent, time: length };
+            self.max_video_progress = ProgressBound { percent, time };
         }
     }
 

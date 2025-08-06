@@ -452,15 +452,18 @@ pub(crate) mod drag_events {
                         if video_player.get_type_id() == TypeId::of::<Uninitialized>() {
                             return Ok(());
                         }
-                    }
+                    } /*else if video_player.get_type_id() == TypeId::of::<Playing>() {
+                        let video_uninitialised: VideoPlayer<I, Playing> = get_state_owned(video_player.deref())?;
+                        *video_player = get_video_player_state_return(video_uninitialised.pause());
+                    }*/
                     video_player.set_video_progress(ctx.percent);
                 },
                 MoveState::StartClipDot => {
-                    debug_console_log!("Start clip clicked");
+                    debug_console_log!("Start clip clicked, percent: {}", ctx.percent);
                     ctx.video_player.borrow_mut().set_min_progress(ctx.percent);
                 },
                 MoveState::EndClipDot => {
-                    debug_console_log!("End clip clicked");
+                    debug_console_log!("End clip clicked, percent: {}", ctx.percent);
                     ctx.video_player.borrow_mut().set_max_progress(ctx.percent);
                 },
                 MoveState::VolumeBar => {
@@ -491,6 +494,16 @@ pub(crate) mod drag_events {
     impl CallbackEvent<Ctx> for DragExitEvent {
         fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
             let ctx = ctx.borrow();
+            match ctx.currently_moving.get() {
+                MoveState::ProgressBar => {
+                    // let mut video_player = ctx.video_player.borrow_mut();
+                    // if video_player.get_type_id() == TypeId::of::<Paused>() {
+                    //     let video_uninitialised: VideoPlayer<HtmlVideoPlayerInternal, Paused> = get_state_owned(video_player.deref())?;
+                    //     *video_player = get_video_player_state_return(video_uninitialised.play());
+                    // }
+                }
+                _ => {}
+            }
             debug_console_log!("Mouse up");
             ctx.set_moving(MoveState::Nothing);
             Ok(())

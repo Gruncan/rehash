@@ -128,7 +128,8 @@ impl CallbackController for HtmlVideoCallbackController {
 
         let start_dot_element = doc.get_element_by_id(start_dot_id).unwrap(); //.dyn_into::<HtmlElement>().unwrap();
 
-        let mouse_click_start_dot_wrapper = Box::new(DragClickClosure::new(&start_dot_element, drag_ctx.clone()));
+        let progress_bar_dom_rec = progress_bar_element.get_bounding_client_rect();
+        let mouse_click_start_dot_wrapper = Box::new(DragClickClosure::new_dom_rec(&start_dot_element, &progress_bar_dom_rec, drag_ctx.clone()));
         let mouse_click_start_dot_closure = CallbackClosureWrapper::create_callback(mouse_click_start_dot_wrapper);
 
         self.ui_controller.register_element_event_listener_specific("mousedown", start_dot_id, mouse_click_start_dot_closure);
@@ -136,7 +137,7 @@ impl CallbackController for HtmlVideoCallbackController {
 
         let end_dot_element = doc.get_element_by_id(end_dot_id).unwrap(); //.dyn_into::<HtmlElement>().unwrap();
 
-        let mouse_click_end_dot_wrapper = Box::new(DragClickClosure::new(&end_dot_element, drag_ctx.clone()));
+        let mouse_click_end_dot_wrapper = Box::new(DragClickClosure::new_dom_rec(&end_dot_element, &progress_bar_dom_rec, drag_ctx.clone()));
         let mouse_click_end_dot_closure = CallbackClosureWrapper::create_callback(mouse_click_end_dot_wrapper);
 
         self.ui_controller.register_element_event_listener_specific("mousedown", end_dot_id, mouse_click_end_dot_closure);
@@ -184,7 +185,9 @@ mod drag_closure {
     impl CallbackClosureWrapper<web_sys::MouseEvent> for DragClickClosure {
         fn closure(&mut self, event: web_sys::MouseEvent) {
             let click_x = event.client_x() as f64;
+
             let percent = ((click_x - self.slider_left) / self.slider_width).max(0f64).min(1f64);
+            debug_console_log!("Click x: {} | left: {} | width {}", click_x, self.slider_left, self.slider_width);
             {
                 let mut ctx = self.ctx.borrow_mut();
                 ctx.set_percent(percent);
@@ -205,6 +208,18 @@ mod drag_closure {
             let rec = element.get_bounding_client_rect();
             let callback = DragClickEvent::new();
 
+            Self {
+                slider_left: rec.left(),
+                slider_width: rec.width(),
+                slider_type: moving_state,
+                callback,
+                ctx,
+            }
+        }
+
+        pub fn new_dom_rec(element: &Element, rec: &DomRect, ctx: DragEventCtxType) -> Self {
+            let moving_state: MoveState = element.id().as_str().into();
+            let callback = DragClickEvent::new();
             Self {
                 slider_left: rec.left(),
                 slider_width: rec.width(),
@@ -267,8 +282,8 @@ mod drag_closure {
                 }
                 self.map.get(&ctx.get_clicked())?
             };
-
             let click_x = event.client_x() as f64;
+            debug_console_log!("Click x: {} | left: {} | width {}", click_x, slider_element.slider_left, slider_element.slider_width);
             let percent = ((click_x - slider_element.slider_left) / slider_element.slider_width).max(0f64).min(1f64);
 
             {

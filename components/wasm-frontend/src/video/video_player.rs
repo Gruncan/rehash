@@ -120,9 +120,7 @@ where
 
     fn set_min_progress(&mut self, percent: f64) {
         self.internal.set_min_progress(percent);
-        let duration = self.get_video_length();
-        let time = duration * percent;
-        self.video_controller.update_start_dot_position(time)
+        self.video_controller.update_start_dot_position(percent * 100f64)
     }
 
     fn get_min_progress(&self) -> f64 {
@@ -131,9 +129,7 @@ where
 
     fn set_max_progress(&mut self, percent: f64) {
         self.internal.set_max_progress(percent);
-        let duration = self.get_video_length();
-        let time = duration - (duration * percent);
-        self.video_controller.update_end_dot_position(time)
+        self.video_controller.update_end_dot_position(100f64 - (percent * 100f64))
     }
 
     fn get_max_progress(&self) -> f64 {
@@ -239,8 +235,9 @@ where
 
     pub(crate) fn ready(mut self) -> VideoPlayerResult<I, Ready> {
         if self.internal.ready() {
-            self.set_max_progress(100f64);
-            self.set_video_progress(0f64);
+            self.set_max_progress(1f64);
+            let min_time = self.internal.get_min_progress().time;
+            self.set_video_progress(min_time);
             Ok(self.transition())
         } else {
             Err(self.transition())
@@ -300,8 +297,10 @@ where
     I: VideoInternal + 'static + Debug,
 {
     pub(crate) fn restart(self) -> VideoPlayerResult<I, Ready> {
-        self.internal.set_video_progress(0f64);
-        self.video_controller.update_progress(0f64, self.get_video_length());
+        let time = self.internal.get_min_progress().time;
+        debug_console_log!("Setting restart time to {}", time);
+        self.internal.set_video_progress(time);
+        self.video_controller.update_progress(time, self.get_video_length());
         Ok(self.transition())
     }
 }
