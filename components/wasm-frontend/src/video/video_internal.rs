@@ -47,6 +47,34 @@ impl VideoPlaybackSpeed {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ProgressBound {
+    pub(crate) percent: f64,
+    pub(crate) time: f64,
+}
+
+impl Default for ProgressBound {
+    fn default() -> Self {
+        Self::min_default()
+    }
+}
+
+impl ProgressBound {
+    pub fn max_default() -> Self {
+        Self {
+            percent: 100f64,
+            time: -1f64,
+        }
+    }
+
+    pub fn min_default() -> Self {
+        Self {
+            percent: 0f64,
+            time: 0f64,
+        }
+    }
+}
+
 
 
 pub trait VideoInternal: Clone {
@@ -76,11 +104,11 @@ pub trait VideoInternal: Clone {
 
     fn set_min_progress(&mut self, percent: f64);
 
-    fn get_min_progress(&self) -> f64;
+    fn get_min_progress(&self) -> &ProgressBound;
 
     fn set_max_progress(&mut self, percent: f64);
 
-    fn get_max_progress(&self) -> f64;
+    fn get_max_progress(&self) -> &ProgressBound;
 
     fn set_playback_speed(&self, speed: VideoPlaybackSpeed);
 

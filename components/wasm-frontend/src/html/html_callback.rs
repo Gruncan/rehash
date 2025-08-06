@@ -39,7 +39,7 @@ impl HtmlVideoCallbackController {
     pub fn new(video_player: SharedVideoPlayer, ui_controller: HtmlVideoUIController) -> Self {
         let play_pause_event: crate::html::html_video::Event = callback_event!(PlayPauseEvent<HtmlVideoPlayerInternal>);
         let mute_unmute_event: crate::html::html_video::Event = callback_event!(MuteUnmuteEvent);
-        let progress_event: crate::html::html_video::Event = callback_event!(ProgressBarChangeEvent);
+        let progress_event: crate::html::html_video::Event = callback_event!(ProgressBarChangeEvent<HtmlVideoPlayerInternal>);
         let settings_event: crate::html::html_video::Event = callback_event!(SettingsEvent);
         let fullscreen_event: crate::html::html_video::Event = callback_event!(FullScreenEvent);
 
@@ -142,9 +142,6 @@ impl CallbackController for HtmlVideoCallbackController {
         self.ui_controller.register_element_event_listener_specific("mousedown", end_dot_id, mouse_click_end_dot_closure);
 
 
-        // percentage should be relative to specific element but global mouse down need current click to get width
-
-
         let volume_dom_rec = volume_bar_element.get_bounding_client_rect();
         let progress_dom_rec = progress_bar_element.get_bounding_client_rect();
         let element_dom_recs: Vec<(Element, &DomRect)> = vec![
@@ -172,7 +169,6 @@ mod drag_closure {
     use crate::log_to_tauri;
     use crate::video::video_callback::CallbackClosureWrapper;
     use std::fmt::Debug;
-    use std::hash::Hash;
     use web_sys::DomRect;
 
     #[derive(Debug, Clone)]
@@ -180,7 +176,7 @@ mod drag_closure {
         slider_width: f64,
         slider_left: f64,
         slider_type: MoveState,
-        callback: DragClickEvent,
+        callback: DragClickEvent<HtmlVideoPlayerInternal>,
         ctx: DragEventCtxType,
     }
 
@@ -207,7 +203,7 @@ mod drag_closure {
         pub fn new(element: &Element, ctx: DragEventCtxType) -> Self {
             let moving_state: MoveState = element.id().as_str().into();
             let rec = element.get_bounding_client_rect();
-            let callback = DragClickEvent {};
+            let callback = DragClickEvent::new();
 
             Self {
                 slider_left: rec.left(),

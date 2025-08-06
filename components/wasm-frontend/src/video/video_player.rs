@@ -42,15 +42,17 @@ pub trait VideoPlayerState: Debug {
 
     fn get_video_length(&self) -> f64;
 
-    fn set_video_time(&self);
-
     fn set_video_progress(&self, progress: f64);
 
     fn set_volume(&self, volume: f64);
 
     fn set_min_progress(&mut self, percent: f64);
 
+    fn get_min_progress(&self) -> f64;
+
     fn set_max_progress(&mut self, percent: f64);
+
+    fn get_max_progress(&self) -> f64;
 
     fn increment_video_speed(&mut self);
 
@@ -102,11 +104,6 @@ where
         self.internal.get_video_length()
     }
 
-    fn set_video_time(&self) {
-        let progress = self.get_progress();
-        let duration = self.get_video_length();
-        self.video_controller.update_progress(progress, duration)
-    }
 
 
     fn set_video_progress(&self, progress: f64) {
@@ -128,6 +125,10 @@ where
         self.video_controller.update_start_dot_position(time)
     }
 
+    fn get_min_progress(&self) -> f64 {
+        self.internal.get_min_progress().time
+    }
+
     fn set_max_progress(&mut self, percent: f64) {
         self.internal.set_max_progress(percent);
         let duration = self.get_video_length();
@@ -135,12 +136,8 @@ where
         self.video_controller.update_end_dot_position(time)
     }
 
-    fn clone_box(&self) -> Box<dyn VideoPlayerState> {
-        Box::new(self.clone())
-    }
-
-    fn get_type_id(&self) -> TypeId {
-        self.type_id
+    fn get_max_progress(&self) -> f64 {
+        self.internal.get_max_progress().time
     }
 
     fn increment_video_speed(&mut self) {
@@ -153,6 +150,14 @@ where
 
     fn get_playback_speed(&self) -> f64 {
         todo!()
+    }
+
+    fn clone_box(&self) -> Box<dyn VideoPlayerState> {
+        Box::new(self.clone())
+    }
+
+    fn get_type_id(&self) -> TypeId {
+        self.type_id
     }
 }
 
@@ -184,6 +189,18 @@ where
         }
     }
 
+    pub(self) fn transition_silent<T>(self) -> VideoPlayer<I, T>
+    where
+        T: VideoPlayerTypeState + 'static,
+    {
+        VideoPlayer {
+            internal: self.internal,
+            marker: std::marker::PhantomData,
+            type_id: std::any::TypeId::of::<T>(),
+            video_controller: self.video_controller,
+        }
+    }
+
     pub fn get_type(&self) -> TypeId {
         self.type_id
     }
@@ -207,7 +224,7 @@ where
 
 impl<I> VideoPlayer<I, Uninitialized>
 where
-    I: VideoInternal + 'static,
+    I: VideoInternal + 'static + Debug,
 {
     pub fn new(internal: I, video_controller: Rc<dyn VideoUIController<I>>) -> VideoPlayer<I, Uninitialized> {
         debug_console_log!("VideoPlayer initializing");
@@ -220,8 +237,10 @@ where
     }
 
 
-    pub(crate) fn ready(self) -> VideoPlayerResult<I, Ready> {
+    pub(crate) fn ready(mut self) -> VideoPlayerResult<I, Ready> {
         if self.internal.ready() {
+            self.set_max_progress(100f64);
+            self.set_video_progress(0f64);
             Ok(self.transition())
         } else {
             Err(self.transition())
@@ -249,12 +268,24 @@ where
 
 impl<I> VideoPlayer<I, Playing>
 where
-    I: VideoInternal + 'static,
+    I: VideoInternal + 'static + Debug,
 {
     pub(crate) fn pause(self) -> VideoPlayerResult<I, Paused> {
         let _ = self.internal.pause().expect("Failed to pause");
         self.video_controller.swap_pause_button();
         Ok(self.transition())
+    }
+
+    pub(crate) fn set_video_time(self) -> VideoPlayerResult<I, Playing> {
+        let progress = self.get_progress();
+        debug_console_log!("{} / {}", progress, self.get_max_progress());
+        if progress >= self.get_max_progress() {
+            Err(self.pause().unwrap().transition())
+        } else {
+            let duration = self.get_video_length();
+            self.video_controller.update_progress(progress, duration);
+            Ok(self.transition_silent())
+        }
     }
 
     pub(crate) fn finish(self) -> VideoPlayerResult<I, Finished> {
@@ -266,10 +297,11 @@ where
 
 impl<I> VideoPlayer<I, Finished>
 where
-    I: VideoInternal + 'static,
+    I: VideoInternal + 'static + Debug,
 {
     pub(crate) fn restart(self) -> VideoPlayerResult<I, Ready> {
         self.internal.set_video_progress(0f64);
+        self.video_controller.update_progress(0f64, self.get_video_length());
         Ok(self.transition())
     }
 }
@@ -315,7 +347,7 @@ impl VideoPlayerTypeState for Paused {
 }
 
 impl VideoPlayerTypeState for Playing {
-    type FallbackState = Paused;
+    type FallbackState = Finished;
 }
 
 impl VideoPlayerTypeState for Finished {

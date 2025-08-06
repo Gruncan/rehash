@@ -21,7 +21,7 @@ pub(crate) use rewind_event::*;
 pub(crate) use settings_event::*;
 
 
-fn get_video_player_state_return<I, S>(video_result: VideoPlayerResult<I, S>) -> Box<dyn VideoPlayerState>
+pub(crate) fn get_video_player_state_return<I, S>(video_result: VideoPlayerResult<I, S>) -> Box<dyn VideoPlayerState>
 where
     I: VideoInternal + 'static + Debug,
     S: VideoPlayerTypeState + 'static + Debug,
@@ -37,7 +37,6 @@ where
         }
     }
 }
-
 
 pub(crate) mod play_pause_event {
     use super::*;
@@ -157,23 +156,44 @@ pub(crate) mod progress_bar_change_event {
     use super::*;
 
     #[derive(Debug, Clone)]
-    pub(crate) struct ProgressBarChangeEvent {}
+    pub(crate) struct ProgressBarChangeEvent<I>
+    where
+        I: VideoInternal + 'static,
+    {
+        marker: PhantomData<I>,
+    }
 
-
-    impl CallbackEvent<SharedVideoPlayer> for ProgressBarChangeEvent {
+    impl<I> CallbackEvent<SharedVideoPlayer> for ProgressBarChangeEvent<I>
+    where
+        I: VideoInternal + 'static + Debug,
+    {
         fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
-            let cell = ctx.borrow();
+            let mut cell = ctx.borrow_mut();
 
-            cell.set_video_time();
+            let id = cell.get_type_id();
+            if id == TypeId::of::<Playing>() {
+                let video_playing: VideoPlayer<I, Playing> = get_state_owned(cell.deref())?;
+                *cell = get_video_player_state_return(video_playing.set_video_time());
+                if cell.get_type_id() == TypeId::of::<Finished>() {
+                    debug_console_log!("Finished");
+                    let video_finished: VideoPlayer<I, Finished> = get_state_owned(cell.deref())?;
+                    *cell = get_video_player_state_return(video_finished.restart());
+                }
+            }
 
             Ok(())
         }
 
     }
 
-    impl ProgressBarChangeEvent {
+    impl<I> ProgressBarChangeEvent<I>
+    where
+        I: VideoInternal + 'static,
+    {
         pub fn new() -> Self {
-            Self {}
+            Self {
+                marker: PhantomData,
+            }
         }
     }
 }
@@ -267,11 +287,18 @@ pub(crate) mod fast_forward_event {
 }
 
 pub(crate) mod drag_events {
+    use crate::html::html_events::get_video_player_state_return;
     use crate::log_to_tauri;
     use crate::video::event::CallbackEvent;
-    use crate::video::video_callback::{SharedVideoPlayer, VideoPlayerState};
+    use crate::video::video_callback::{SharedVideoPlayer, VideoPlayer, VideoPlayerState};
+    use crate::video::video_internal::VideoInternal;
+    use crate::video::video_player::{get_state_owned, Uninitialized};
     use crate::JsResult;
+    use std::any::TypeId;
     use std::cell::{Cell, RefCell};
+    use std::fmt::Debug;
+    use std::marker::PhantomData;
+    use std::ops::Deref;
     use std::rc::Rc;
     use wasm_bindings_lib::debug_console_log;
 
@@ -396,10 +423,18 @@ pub(crate) mod drag_events {
     }
 
     #[derive(Debug, Clone)]
-    pub(crate) struct DragClickEvent {}
+    pub(crate) struct DragClickEvent<I>
+    where
+        I: VideoInternal + 'static,
+    {
+        marker: PhantomData<I>,
+    }
 
 
-    impl CallbackEvent<Ctx> for DragClickEvent {
+    impl<I> CallbackEvent<Ctx> for DragClickEvent<I>
+    where
+        I: VideoInternal + 'static + Debug,
+    {
         fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
             let ctx = ctx.borrow();
             ctx.set_moving(ctx.clicked);
@@ -409,7 +444,16 @@ pub(crate) mod drag_events {
                 },
                 MoveState::ProgressBar => {
                     debug_console_log!("Progress bar clicked");
-                    ctx.video_player.borrow_mut().set_video_progress(ctx.percent);
+                    let mut video_player = ctx.video_player.borrow_mut();
+                    if video_player.get_type_id() == TypeId::of::<Uninitialized>() {
+                        debug_console_log!("Not changing state as video not initialized");
+                        let video_uninitialised: VideoPlayer<I, Uninitialized> = get_state_owned(video_player.deref())?;
+                        *video_player = get_video_player_state_return(video_uninitialised.ready());
+                        if video_player.get_type_id() == TypeId::of::<Uninitialized>() {
+                            return Ok(());
+                        }
+                    }
+                    video_player.set_video_progress(ctx.percent);
                 },
                 MoveState::StartClipDot => {
                     debug_console_log!("Start clip clicked");
@@ -428,6 +472,18 @@ pub(crate) mod drag_events {
             Ok(())
         }
     }
+
+    impl<I> DragClickEvent<I>
+    where
+        I: VideoInternal + 'static,
+    {
+        pub fn new() -> Self {
+            Self {
+                marker: PhantomData,
+            }
+        }
+    }
+
 
     #[derive(Debug, Clone)]
     pub(crate) struct DragExitEvent {}
