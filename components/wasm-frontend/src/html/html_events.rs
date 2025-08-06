@@ -291,13 +291,14 @@ pub(crate) mod drag_events {
     use crate::video::video_internal::VideoInternal;
     use crate::video::video_player::{get_state_owned, Uninitialized};
     use crate::JsResult;
+    use rehash_utils::debug_console_log;
+    use rehash_utils::errors::RehashResultUnit;
     use std::any::TypeId;
     use std::cell::{Cell, RefCell};
     use std::fmt::Debug;
     use std::marker::PhantomData;
     use std::ops::Deref;
     use std::rc::Rc;
-    use wasm_bindings_lib::debug_console_log;
 
     const PROGRESS_BAR_ID: &'static str = "progress-bar";
     const VOLUME_ID: &'static str = "volume-slider";
@@ -536,7 +537,7 @@ pub(crate) mod playback_speed_event {
     where
         A: PlaybackSpeedAction + Debug + Clone + 'static,
     {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             let mut video_player = ctx.borrow_mut();
             if self.type_id == TypeId::of::<PlaybackIncreaseAction>() {
                 debug_console_log!("Increasing playback");
@@ -545,7 +546,7 @@ pub(crate) mod playback_speed_event {
                 debug_console_log!("Decreasing playback");
                 video_player.decrement_video_speed();
             } else {
-                return Err(JsValue::from_str("Callback play event has incorrect type"))
+                return Err("Callback play event has incorrect type".into())
             }
             Ok(())
         }

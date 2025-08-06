@@ -165,9 +165,5 @@ pub(crate) mod update_end_event {
             debug_console_log!("Trigger UpdateEndEvent");
             Ok(())
         }
-
-        fn clone_box(&self) -> Box<dyn CallbackEvent<()>> {
-            Box::new(self.clone())
-        }
     }
 }
