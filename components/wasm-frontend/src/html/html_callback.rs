@@ -11,7 +11,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
-use web_sys::Element;
+use web_sys::{DomRect, Element};
 
 pub(crate) use control_closure::*;
 pub(crate) use drag_closure::*;
@@ -112,7 +112,7 @@ impl CallbackController for HtmlVideoCallbackController {
 
         let volume_bar_element = doc.get_element_by_id(volume_bar_id).unwrap(); //.dyn_into::<Element>().unwrap();
 
-        let mouse_click_volume_wrapper = Box::new(DragClickClosure::new(volume_bar_element, drag_ctx.clone()));
+        let mouse_click_volume_wrapper = Box::new(DragClickClosure::new(&volume_bar_element, drag_ctx.clone()));
         let mouse_click_volume_closure = CallbackClosureWrapper::create_callback(mouse_click_volume_wrapper);
 
         self.ui_controller.register_element_event_listener_specific("mousedown", volume_bar_id, mouse_click_volume_closure);
@@ -120,7 +120,7 @@ impl CallbackController for HtmlVideoCallbackController {
 
         let progress_bar_element = doc.get_element_by_id(progress_bar_id).unwrap(); //.dyn_into::<HtmlElement>().unwrap();
 
-        let mouse_click_progress_wrapper = Box::new(DragClickClosure::new(progress_bar_element, drag_ctx.clone()));
+        let mouse_click_progress_wrapper = Box::new(DragClickClosure::new(&progress_bar_element, drag_ctx.clone()));
         let mouse_click_progress_closure = CallbackClosureWrapper::create_callback(mouse_click_progress_wrapper);
 
         self.ui_controller.register_element_event_listener_specific("mousedown", progress_bar_id, mouse_click_progress_closure);
@@ -128,7 +128,7 @@ impl CallbackController for HtmlVideoCallbackController {
 
         let start_dot_element = doc.get_element_by_id(start_dot_id).unwrap(); //.dyn_into::<HtmlElement>().unwrap();
 
-        let mouse_click_start_dot_wrapper = Box::new(DragClickClosure::new(start_dot_element, drag_ctx.clone()));
+        let mouse_click_start_dot_wrapper = Box::new(DragClickClosure::new(&start_dot_element, drag_ctx.clone()));
         let mouse_click_start_dot_closure = CallbackClosureWrapper::create_callback(mouse_click_start_dot_wrapper);
 
         self.ui_controller.register_element_event_listener_specific("mousedown", start_dot_id, mouse_click_start_dot_closure);
@@ -136,18 +136,28 @@ impl CallbackController for HtmlVideoCallbackController {
 
         let end_dot_element = doc.get_element_by_id(end_dot_id).unwrap(); //.dyn_into::<HtmlElement>().unwrap();
 
-        let mouse_click_end_dot_wrapper = Box::new(DragClickClosure::new(end_dot_element, drag_ctx.clone()));
+        let mouse_click_end_dot_wrapper = Box::new(DragClickClosure::new(&end_dot_element, drag_ctx.clone()));
         let mouse_click_end_dot_closure = CallbackClosureWrapper::create_callback(mouse_click_end_dot_wrapper);
 
         self.ui_controller.register_element_event_listener_specific("mousedown", end_dot_id, mouse_click_end_dot_closure);
 
 
         // percentage should be relative to specific element but global mouse down need current click to get width
-        // DragMoveClosure::new(container_element)
-        // self.ui_controller.register_doc_global_event_listener_specific("mousemove", mouse_move_start_dot_closure);
-        //
-        //
-        // self.ui_controller.register_doc_global_event_listener_specific("mouseup", drag_exit_closure);
+
+
+        let volume_dom_rec = volume_bar_element.get_bounding_client_rect();
+        let progress_dom_rec = progress_bar_element.get_bounding_client_rect();
+        let element_dom_recs: Vec<(Element, &DomRect)> = vec![
+            (volume_bar_element, &volume_dom_rec),
+            (progress_bar_element, &progress_dom_rec),
+            (start_dot_element, &progress_dom_rec),
+            (end_dot_element, &progress_dom_rec),
+        ];
+
+        let drag_move_wrapper = Box::new(DragMoveClosure::new(element_dom_recs, drag_ctx.clone()));
+        let drag_move_closure = CallbackClosureWrapper::create_callback(drag_move_wrapper);
+        self.ui_controller.register_doc_global_event_listener_specific("mousemove", drag_move_closure);
+
 
 
         debug_console_log!("Registered callback handlers");
@@ -160,6 +170,8 @@ mod drag_closure {
     use crate::log_to_tauri;
     use crate::video::video_callback::CallbackClosureWrapper;
     use std::fmt::Debug;
+    use std::hash::Hash;
+    use web_sys::DomRect;
 
     #[derive(Debug, Clone)]
     pub(crate) struct DragClickClosure {
@@ -190,7 +202,7 @@ mod drag_closure {
     }
 
     impl DragClickClosure {
-        pub fn new(element: Element, ctx: DragEventCtxType) -> Self {
+        pub fn new(element: &Element, ctx: DragEventCtxType) -> Self {
             let moving_state: MoveState = element.id().as_str().into();
             let rec = element.get_bounding_client_rect();
             let callback = DragClickEvent {};
@@ -206,42 +218,69 @@ mod drag_closure {
     }
 
     #[derive(Debug, Clone)]
-    pub(crate) struct DragMoveClosure {
+    pub(crate) struct DragSliderElement {
         slider_width: f64,
         slider_left: f64,
+    }
+
+    #[derive(Debug, Clone)]
+    pub(crate) struct DragMoveClosure {
+        map: HashMap<MoveState, DragSliderElement>,
         callback: DragMoveEvent,
         ctx: DragEventCtxType,
     }
 
     impl CallbackClosureWrapper<web_sys::MouseEvent> for DragMoveClosure {
         fn closure(&mut self, event: web_sys::MouseEvent) {
-            //todo fix this to not repeat
-            let click_x = event.client_x() as f64;
-            let percent = ((click_x - self.slider_left) / self.slider_width).max(0f64).min(1f64);
-            {
-                let mut ctx = self.ctx.borrow_mut();
-                ctx.set_percent(percent);
-            }
-            match self.callback.trigger(&mut self.ctx) {
-                Ok(_) => {}
-                Err(e) => {
-                    debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
+            match self.handle_closure(event) {
+                _ => {
+                    return;
                 }
             }
         }
     }
 
     impl DragMoveClosure {
-        pub fn new(element: Element, ctx: DragEventCtxType) -> Self {
-            let rec = element.get_bounding_client_rect();
+        pub fn new(elements: Vec<(Element, &DomRect)>, ctx: DragEventCtxType) -> Self {
+            let map: HashMap<MoveState, DragSliderElement> = HashMap::from_iter(
+                elements.into_iter().map(|(el, dom_rect)| {
+                    let key: MoveState = el.id().as_str().into();
+                    let value = DragSliderElement {
+                        slider_width: dom_rect.width(),
+                        slider_left: dom_rect.left(),
+                    };
+                    (key, value)
+                })
+            );
             let callback = DragMoveEvent {};
 
             Self {
-                slider_left: rec.left(),
-                slider_width: rec.width(),
+                map,
                 callback,
                 ctx,
             }
+        }
+
+        fn handle_closure(&mut self, event: web_sys::MouseEvent) -> Option<()> {
+            let slider_element = {
+                let ctx = self.ctx.borrow();
+                if !ctx.is_clicked() {
+                    return None;
+                }
+                self.map.get(&ctx.get_clicked())?
+            };
+
+            let click_x = event.client_x() as f64;
+            let percent = ((click_x - slider_element.slider_left) / slider_element.slider_width).max(0f64).min(1f64);
+
+            {
+                let mut ctx = self.ctx.borrow_mut();
+                ctx.set_percent(percent);
+            }
+
+            self.callback.trigger(&mut self.ctx).ok()?;
+
+            Some(())
         }
     }
 

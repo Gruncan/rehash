@@ -279,8 +279,7 @@ pub(crate) mod drag_events {
     const END_DOT_ID: &'static str = "end-dot";
 
 
-
-    #[derive(Debug, Copy, Clone)]
+    #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
     pub(crate) enum MoveState {
         Nothing,
         ProgressBar,
@@ -348,6 +347,14 @@ pub(crate) mod drag_events {
 
         pub fn set_clicked(&mut self, clicked: MoveState) {
             self.clicked = clicked
+        }
+
+        pub fn is_clicked(&self) -> bool {
+            self.currently_moving.get() != MoveState::Nothing
+        }
+
+        pub fn get_clicked(&self) -> MoveState {
+            self.currently_moving.get()
         }
     }
 
