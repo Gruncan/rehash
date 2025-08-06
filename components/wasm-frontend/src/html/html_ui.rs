@@ -87,7 +87,8 @@ impl VideoUIController<HtmlVideoPlayerInternal> for HtmlVideoUIController {
 fn format_time(time: f64) -> String {
     let mins = (time / 60.0).floor();
     let secs = (time % 60.0).floor();
-    format!("{:02}:{:02}", mins, secs)
+    let millis = ((time % 1.0) * 100.0).round();
+    format!("{:02}:{:02}:{:02}", mins, secs, millis)
 }
 
 impl VideoUIRegister for HtmlVideoUIController {
