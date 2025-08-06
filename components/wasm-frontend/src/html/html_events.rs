@@ -281,7 +281,7 @@ pub(crate) mod drag_events {
 
 
     #[derive(Debug, Copy, Clone)]
-    pub(crate) enum CurrentlyMoving {
+    pub(crate) enum MoveState {
         Nothing,
         ProgressBar,
         StartClipDot,
@@ -289,35 +289,34 @@ pub(crate) mod drag_events {
         VolumeBar,
     }
 
-    impl From<&str> for CurrentlyMoving {
+    impl From<&str> for MoveState {
         fn from(value: &str) -> Self {
             match value {
-                PROGRESS_BAR_ID => CurrentlyMoving::ProgressBar,
-                START_DOT_ID => CurrentlyMoving::StartClipDot,
-                END_DOT_ID => CurrentlyMoving::EndClipDot,
-                VOLUME_ID => CurrentlyMoving::VolumeBar,
-                _ => CurrentlyMoving::Nothing,
+                PROGRESS_BAR_ID => MoveState::ProgressBar,
+                START_DOT_ID => MoveState::StartClipDot,
+                END_DOT_ID => MoveState::EndClipDot,
+                VOLUME_ID => MoveState::VolumeBar,
+                _ => MoveState::Nothing,
             }
         }
     }
 
-    impl TryFrom<CurrentlyMoving> for &str {
+    impl TryFrom<MoveState> for &str {
         type Error = ();
 
-        fn try_from(value: CurrentlyMoving) -> Result<Self, Self::Error> {
+        fn try_from(value: MoveState) -> Result<Self, Self::Error> {
             match value {
-                CurrentlyMoving::ProgressBar => Ok(PROGRESS_BAR_ID),
-                CurrentlyMoving::StartClipDot => Ok(START_DOT_ID),
-                CurrentlyMoving::EndClipDot => Ok(END_DOT_ID),
-                CurrentlyMoving::VolumeBar => Ok(VOLUME_ID),
+                MoveState::ProgressBar => Ok(PROGRESS_BAR_ID),
+                MoveState::StartClipDot => Ok(START_DOT_ID),
+                MoveState::EndClipDot => Ok(END_DOT_ID),
+                MoveState::VolumeBar => Ok(VOLUME_ID),
                 _ => Err(())
             }
         }
     }
 
 
-
-    type MovingCtx = Rc<Cell<CurrentlyMoving>>;
+    type MovingCtx = Rc<Cell<MoveState>>;
 
     pub(crate) type DragEventCtxType = Rc<RefCell<DragEventCtx>>;
 
@@ -326,16 +325,16 @@ pub(crate) mod drag_events {
         currently_moving: MovingCtx,
         video_player: SharedVideoPlayer,
         percent: f64,
-        clicked: CurrentlyMoving,
+        clicked: MoveState,
     }
 
     impl DragEventCtx {
         pub fn new(video_player: SharedVideoPlayer) -> Self {
             Self {
                 video_player,
-                currently_moving: Rc::new(Cell::new(CurrentlyMoving::Nothing)),
+                currently_moving: Rc::new(Cell::new(MoveState::Nothing)),
                 percent: 0f64,
-                clicked: CurrentlyMoving::Nothing,
+                clicked: MoveState::Nothing,
             }
         }
 
@@ -343,11 +342,11 @@ pub(crate) mod drag_events {
             self.percent = percent
         }
 
-        pub fn set_moving(&self, moving_type: CurrentlyMoving) {
+        pub fn set_moving(&self, moving_type: MoveState) {
             self.currently_moving.set(moving_type)
         }
 
-        pub fn set_clicked(&mut self, clicked: CurrentlyMoving) {
+        pub fn set_clicked(&mut self, clicked: MoveState) {
             self.clicked = clicked
         }
     }
@@ -361,17 +360,17 @@ pub(crate) mod drag_events {
         fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
             let ctx = ctx.borrow();
             match ctx.currently_moving.get() {
-                CurrentlyMoving::Nothing => {},
-                CurrentlyMoving::ProgressBar => {
+                MoveState::Nothing => {},
+                MoveState::ProgressBar => {
                     ctx.video_player.borrow_mut().set_video_progress(ctx.percent);
                 },
-                CurrentlyMoving::StartClipDot => {
+                MoveState::StartClipDot => {
                     ctx.video_player.borrow_mut().set_min_progress(ctx.percent);
                 },
-                CurrentlyMoving::EndClipDot => {
+                MoveState::EndClipDot => {
                     ctx.video_player.borrow_mut().set_max_progress(ctx.percent);
                 },
-                CurrentlyMoving::VolumeBar => {
+                MoveState::VolumeBar => {
                     let video_mutex = ctx.video_player.borrow();
                     video_mutex.set_volume(ctx.percent);
                 },
@@ -390,17 +389,17 @@ pub(crate) mod drag_events {
             let ctx = ctx.borrow();
             ctx.set_moving(ctx.clicked);
             match ctx.currently_moving.get() {
-                CurrentlyMoving::Nothing => {},
-                CurrentlyMoving::ProgressBar => {
+                MoveState::Nothing => {},
+                MoveState::ProgressBar => {
                     ctx.video_player.borrow_mut().set_video_progress(ctx.percent);
                 },
-                CurrentlyMoving::StartClipDot => {
+                MoveState::StartClipDot => {
                     ctx.video_player.borrow_mut().set_min_progress(ctx.percent);
                 },
-                CurrentlyMoving::EndClipDot => {
+                MoveState::EndClipDot => {
                     ctx.video_player.borrow_mut().set_max_progress(ctx.percent);
                 },
-                CurrentlyMoving::VolumeBar => {
+                MoveState::VolumeBar => {
                     let video_mutex = ctx.video_player.borrow();
                     video_mutex.set_volume(ctx.percent);
                 },
@@ -415,7 +414,7 @@ pub(crate) mod drag_events {
     impl CallbackEvent<Ctx> for DragExitEvent {
         fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
             let ctx = ctx.borrow();
-            ctx.set_moving(CurrentlyMoving::Nothing);
+            ctx.set_moving(MoveState::Nothing);
             Ok(())
         }
     }

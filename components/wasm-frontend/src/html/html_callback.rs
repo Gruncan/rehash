@@ -99,10 +99,10 @@ impl CallbackController for HtmlVideoCallbackController {
         self.ui_controller.register_video_global_event_listener_specific("timeupdate", timeupdate_closure);
 
 
-        let progress_bar_id: &str = CurrentlyMoving::ProgressBar.try_into().unwrap();
-        let volume_bar_id: &str = CurrentlyMoving::VolumeBar.try_into().unwrap();
-        let start_dot_id: &str = CurrentlyMoving::StartClipDot.try_into().unwrap();
-        let end_dot_id: &str = CurrentlyMoving::EndClipDot.try_into().unwrap();
+        let progress_bar_id: &str = MoveState::ProgressBar.try_into().unwrap();
+        let volume_bar_id: &str = MoveState::VolumeBar.try_into().unwrap();
+        let start_dot_id: &str = MoveState::StartClipDot.try_into().unwrap();
+        let end_dot_id: &str = MoveState::EndClipDot.try_into().unwrap();
 
 
         let drag_ctx = Rc::new(RefCell::new(DragEventCtx::new(self.video_player.clone())));
@@ -165,7 +165,7 @@ mod drag_closure {
     pub(crate) struct DragClickClosure {
         slider_width: f64,
         slider_left: f64,
-        slider_type: CurrentlyMoving,
+        slider_type: MoveState,
         callback: DragClickEvent,
         ctx: DragEventCtxType,
     }
@@ -191,7 +191,7 @@ mod drag_closure {
 
     impl DragClickClosure {
         pub fn new(element: Element, ctx: DragEventCtxType) -> Self {
-            let moving_state: CurrentlyMoving = element.id().as_str().into();
+            let moving_state: MoveState = element.id().as_str().into();
             let rec = element.get_bounding_client_rect();
             let callback = DragClickEvent {};
 
