@@ -30,7 +30,7 @@ fn wasm_error(message: String) {
 
 #[tauri::command]
 async fn create_video_stream(stream_handler: State<'_, VideoStreamHandler>, path: String) -> Result<VideoStreamMeta, String> {
-    stream_handler.create_stream(path, 20).await
+    stream_handler.create_stream(path, 200).await
 }
 
 #[tauri::command]

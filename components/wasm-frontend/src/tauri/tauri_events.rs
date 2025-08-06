@@ -71,16 +71,14 @@ pub(crate) mod file_open_event {
         let url = Url::create_object_url_with_source(&media_source)?;
         debug_console_log!("url: {}", url);
         html_video_element.set_src(url.as_str());
-        let source_buffer = media_source.add_source_buffer("video/mp4; codecs=\"avc1.42E01E\"")
-            .or_else(|e| Err(format!("Failed to create source buffer: {:?}", e)))?;
-        let ctx = Arc::new(Mutex::new(SourceOpenEventCtx { source_buffer }));
+
+        let ctx = Arc::new(Mutex::new(SourceOpenEventCtx { media_source: media_source.clone(), video_element: html_video_element.clone() }));
         let event = Rc::new(RefCell::new(SourceOpenEvent {}));
 
-        let closure = CallbackClosureWrapper::create_callback(Box::new(SourceOpenClosure::new(ctx, event)));
+        let open_source_closure = CallbackClosureWrapper::create_callback(Box::new(SourceOpenClosure::new(ctx, event)));
 
-
-        media_source.add_event_listener_with_callback("sourceopen", closure.as_ref().as_ref().unchecked_ref()).expect("Failed to create sourceopen callback");
-        closure.forget();
+        media_source.add_event_listener_with_callback("sourceopen", open_source_closure.as_ref().as_ref().unchecked_ref()).expect("Failed to create sourceopen callback");
+        open_source_closure.forget();
         Ok(())
     }
 
@@ -92,7 +90,7 @@ pub(crate) mod file_open_event {
             Ok(result) => {
                 let object: VideoStreamMeta = serde_wasm_bindgen::from_value(result).unwrap();
                 debug_console_log!("create_video_stream returned {:?}", object);
-                start_stream(video_element, object).await.unwrap();
+                start_stream(video_element, object).await.expect("Failed to start stream");
 
             },
             Err(e) => {
@@ -105,15 +103,16 @@ pub(crate) mod file_open_event {
 
 pub(crate) mod source_open_event {
     use super::*;
+    use rehash_utils::codec::VideoStreamChunk;
     use rehash_utils::utils::tauri_invoke;
     use wasm_bindgen::JsValue;
-    use web_sys::SourceBuffer;
 
     pub type SourceEventCtxType = Arc<Mutex<SourceOpenEventCtx>>;
 
     #[derive(Debug)]
     pub(crate) struct SourceOpenEventCtx {
-        pub(crate) source_buffer: SourceBuffer,
+        pub(crate) video_element: HtmlVideoElement,
+        pub(crate) media_source: MediaSource,
     }
 
     #[derive(Debug, Clone)]
@@ -121,14 +120,31 @@ pub(crate) mod source_open_event {
 
     impl CallbackEvent<SourceEventCtxType> for SourceOpenEvent {
         fn trigger(&mut self, ctx: &mut SourceEventCtxType) -> RehashResultUnit {
+            let source_buffer = {
+                let mutex = ctx.lock().unwrap();
+
+                mutex.media_source.add_source_buffer("video/mp4; codecs=\"avc1.42E01E, mp4a.40.2\"")
+                    .or_else(|e| Err(format!("Failed to create source buffer: {:?}", e)))?
+            };
+
+            // let event = Rc::new(RefCell::new(UpdateEndEvent {}));
+            // let update_end_closure = CallbackClosureWrapper::create_callback(Box::new(UpdateEndClosure::new((), event)));
+            // source_buffer.add_event_listener_with_callback("updateend", update_end_closure.as_ref().as_ref().unchecked_ref()).expect("Failed to create updateend callback");
+            // update_end_closure.forget();
+
             let ctx = ctx.clone();
+            debug_console_log!("source buffer created: {:?}", source_buffer);
             spawn_local(async move {
                 match into_async!(tauri_invoke("get_chunk", JsValue::NULL)).await {
-                    Ok(chunk) => {
+                    Ok(obj) => {
                         let mutex = ctx.lock().unwrap();
-                        let uint8_array = js_sys::Uint8Array::new(&chunk);
+                        let chunk: VideoStreamChunk = serde_wasm_bindgen::from_value(obj).unwrap();
+                        debug_console_log!("get_chunk returned {:?}", chunk);
+                        let uint8_array = js_sys::Uint8Array::from(&chunk.bytes[..]);
                         debug_console_log!("Received chunk, length {}", uint8_array.length());
-                        mutex.source_buffer.append_buffer_with_array_buffer(&uint8_array.buffer()).expect("Failed to append source buffer");
+                        source_buffer.append_buffer_with_array_buffer(&uint8_array.buffer()).expect("Failed to append source buffer");
+                        // mutex.media_source.end_of_stream().expect("Failed to end source stream");
+                        mutex.video_element.play().expect("Failed to play video");
                     },
                     Err(e) => {
                         error_log!("Failed to get chunk {}", e.as_string().unwrap());
@@ -139,6 +155,25 @@ pub(crate) mod source_open_event {
         }
 
         fn clone_box(&self) -> Box<dyn CallbackEvent<SourceEventCtxType>> {
+            Box::new(self.clone())
+        }
+    }
+}
+
+pub(crate) mod update_end_event {
+    use super::*;
+
+    #[derive(Debug, Clone)]
+    pub struct UpdateEndEvent {}
+
+
+    impl CallbackEvent<()> for UpdateEndEvent {
+        fn trigger(&mut self, _data: &mut ()) -> RehashResultUnit {
+            debug_console_log!("Trigger UpdateEndEvent");
+            Ok(())
+        }
+
+        fn clone_box(&self) -> Box<dyn CallbackEvent<()>> {
             Box::new(self.clone())
         }
     }

@@ -108,3 +108,34 @@ pub(crate) mod source_open_closure {
         }
     }
 }
+
+pub(crate) mod update_end_closure {
+    use crate::video::event::CallbackEvent;
+    use crate::video::video_callback::CallbackClosureWrapper;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use web_sys::Event;
+
+    type Ctx = ();
+    type Callback = Rc<RefCell<dyn CallbackEvent<()>>>;
+
+
+    #[derive(Debug)]
+    pub(crate) struct UpdateEndClosure {
+        ctx: Ctx,
+        callback: Callback,
+    }
+
+    impl UpdateEndClosure {
+        pub fn new(ctx: Ctx, callback: Callback) -> Self {
+            Self { ctx, callback }
+        }
+    }
+
+    impl CallbackClosureWrapper<Event> for UpdateEndClosure {
+        fn closure(&mut self, _: Event) {
+            let mut callback = self.callback.borrow_mut();
+            callback.trigger(&mut self.ctx).expect("Failed callback");
+        }
+    }
+}
