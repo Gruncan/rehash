@@ -267,6 +267,7 @@ pub(crate) mod fast_forward_event {
 }
 
 pub(crate) mod drag_events {
+    use crate::log_to_tauri;
     use crate::video::event::CallbackEvent;
     use crate::video::video_callback::{SharedVideoPlayer, VideoPlayerState};
     use crate::JsResult;

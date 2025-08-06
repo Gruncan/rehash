@@ -100,7 +100,6 @@ macro_rules! error_log {
 #[macro_export]
 macro_rules! debug_console_log {
     ($($t:tt)*) => {
-        use crate::log_to_tauri;
         #[cfg(debug_assertions)]
         {
             log_to_tauri(&format_args!("[DEBUG] {}", format_args!($($t)*)).to_string())
