@@ -272,6 +272,7 @@ pub(crate) mod drag_events {
     use crate::JsResult;
     use std::cell::{Cell, RefCell};
     use std::rc::Rc;
+    use wasm_bindings_lib::debug_console_log;
 
     const PROGRESS_BAR_ID: &'static str = "progress-bar";
     const VOLUME_ID: &'static str = "volume-slider";
@@ -367,17 +368,23 @@ pub(crate) mod drag_events {
         fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
             let ctx = ctx.borrow();
             match ctx.currently_moving.get() {
-                MoveState::Nothing => {},
+                MoveState::Nothing => {
+                    debug_console_log!("Nothing clicked to drag.");
+                },
                 MoveState::ProgressBar => {
+                    debug_console_log!("Progress bar clicked to drag.");
                     ctx.video_player.borrow_mut().set_video_progress(ctx.percent);
                 },
                 MoveState::StartClipDot => {
+                    debug_console_log!("Start clip clicked to drag.");
                     ctx.video_player.borrow_mut().set_min_progress(ctx.percent);
                 },
                 MoveState::EndClipDot => {
+                    debug_console_log!("End clip clicked to drag.");
                     ctx.video_player.borrow_mut().set_max_progress(ctx.percent);
                 },
                 MoveState::VolumeBar => {
+                    debug_console_log!("Volume clip clicked to drag.");
                     let video_mutex = ctx.video_player.borrow();
                     video_mutex.set_volume(ctx.percent);
                 },
@@ -396,17 +403,23 @@ pub(crate) mod drag_events {
             let ctx = ctx.borrow();
             ctx.set_moving(ctx.clicked);
             match ctx.currently_moving.get() {
-                MoveState::Nothing => {},
+                MoveState::Nothing => {
+                    debug_console_log!("Nothing clicked");
+                },
                 MoveState::ProgressBar => {
+                    debug_console_log!("Progress bar clicked");
                     ctx.video_player.borrow_mut().set_video_progress(ctx.percent);
                 },
                 MoveState::StartClipDot => {
+                    debug_console_log!("Start clip clicked");
                     ctx.video_player.borrow_mut().set_min_progress(ctx.percent);
                 },
                 MoveState::EndClipDot => {
+                    debug_console_log!("End clip clicked");
                     ctx.video_player.borrow_mut().set_max_progress(ctx.percent);
                 },
                 MoveState::VolumeBar => {
+                    debug_console_log!("Volume clip clicked");
                     let video_mutex = ctx.video_player.borrow();
                     video_mutex.set_volume(ctx.percent);
                 },
@@ -421,6 +434,7 @@ pub(crate) mod drag_events {
     impl CallbackEvent<Ctx> for DragExitEvent {
         fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
             let ctx = ctx.borrow();
+            debug_console_log!("Mouse up");
             ctx.set_moving(MoveState::Nothing);
             Ok(())
         }

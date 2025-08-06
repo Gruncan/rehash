@@ -158,7 +158,9 @@ impl CallbackController for HtmlVideoCallbackController {
         let drag_move_closure = CallbackClosureWrapper::create_callback(drag_move_wrapper);
         self.ui_controller.register_doc_global_event_listener_specific("mousemove", drag_move_closure);
 
-
+        let drag_exit_wrapper = Box::new(DragExitClosure::new(drag_ctx));
+        let drag_exit_closure = CallbackClosureWrapper::create_callback(drag_exit_wrapper);
+        self.ui_controller.register_doc_global_event_listener_specific("mouseup", drag_exit_closure);
 
         debug_console_log!("Registered callback handlers");
     }
@@ -297,6 +299,15 @@ mod drag_closure {
                 Err(e) => {
                     debug_console_log!("Tried to go into an unusable state: {}", e.as_string().unwrap());
                 }
+            }
+        }
+    }
+
+    impl DragExitClosure {
+        pub fn new(ctx: DragEventCtxType) -> Self {
+            Self {
+                callback: DragExitEvent {},
+                ctx,
             }
         }
     }
