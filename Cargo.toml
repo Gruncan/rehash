@@ -1,6 +1,6 @@
 [workspace]
 members = [
     "rehash-desktop",
-    "components/wasm-frontend",
-    "components/wasm-loader"
+    "components/rehash-frontend",
+    "components/rehash-loader"
     , "components/rehash-utils"]

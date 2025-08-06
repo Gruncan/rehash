@@ -44,7 +44,7 @@ jobs:
         run: cargo install wasm-pack
 
       - name: Run Script
-        working-directory: ./components/wasm-frontend
+        working-directory: ./components/rehash-frontend
         run: ./build-frontend.sh
 
       - name: Upload WASM frontend artifact
@@ -77,7 +77,7 @@ jobs:
         run: cargo install wasm-pack
 
       - name: Run Script
-        working-directory: ./components/wasm-loader
+        working-directory: ./components/rehash-loader
         run: ./build-loader.sh
 
       - name: Upload WASM Loader artifact
