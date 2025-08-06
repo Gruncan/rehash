@@ -173,17 +173,12 @@ body {
     margin-left: auto;
 }
 
-/* Skip back with circular arrow and 5 */
+
 #skip-back svg {
     transform: scaleX(-1);
 }
 
-/* Skip forward with circular arrow and 5 */
-#skip-forward svg {
-    /* Already oriented correctly */
-}
 
-/* Restart icon */
 #restart svg {
     transform: rotate(180deg);
 }

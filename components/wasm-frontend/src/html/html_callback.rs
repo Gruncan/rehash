@@ -186,8 +186,11 @@ mod drag_closure {
         fn closure(&mut self, event: web_sys::MouseEvent) {
             let click_x = event.client_x() as f64;
 
-            let percent = ((click_x - self.slider_left) / self.slider_width).max(0f64).min(1f64);
-            debug_console_log!("Click x: {} | left: {} | width {}", click_x, self.slider_left, self.slider_width);
+            let percent = ((click_x - self.slider_left) / self.slider_width)
+                .max(0f64).min(1f64);
+            debug_console_log!("Click x: {} | left: {} | width {}", click_x,
+                self.slider_left, self.slider_width);
+
             {
                 let mut ctx = self.ctx.borrow_mut();
                 ctx.set_percent(percent);
@@ -283,8 +286,10 @@ mod drag_closure {
                 self.map.get(&ctx.get_clicked())?
             };
             let click_x = event.client_x() as f64;
-            debug_console_log!("Click x: {} | left: {} | width {}", click_x, slider_element.slider_left, slider_element.slider_width);
-            let percent = ((click_x - slider_element.slider_left) / slider_element.slider_width).max(0f64).min(1f64);
+            debug_console_log!("Click x: {} | left: {} | width {}", click_x,
+                slider_element.slider_left, slider_element.slider_width);
+            let percent = ((click_x - slider_element.slider_left) / slider_element.slider_width)
+                .max(0f64).min(1f64);
 
             {
                 let mut ctx = self.ctx.borrow_mut();

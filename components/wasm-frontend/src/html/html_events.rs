@@ -404,7 +404,7 @@ pub(crate) mod drag_events {
                     ctx.video_player.borrow_mut().set_video_progress(ctx.percent);
                 },
                 MoveState::StartClipDot => {
-                    debug_console_log!("Start clip clicked to drag.");
+                    debug_console_log!("Start clip clicked to drag: {}", ctx.percent);
                     ctx.video_player.borrow_mut().set_min_progress(ctx.percent);
                 },
                 MoveState::EndClipDot => {

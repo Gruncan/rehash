@@ -248,11 +248,14 @@ where
 
 impl<I, T> VideoPlayer<I, T>
 where
-    I: VideoInternal + 'static,
-    T: Playable + 'static,
+    I: VideoInternal + Debug + 'static,
+    T: Playable + Debug + 'static,
 {
     pub(crate) fn play(self) -> VideoPlayerResult<I, Playing> {
         // should probably return a 'future' type state e.g. WaitingToPlay
+        let t = self.internal.get_min_progress().time;
+        debug_console_log!("min time: {}", t);
+        self.set_video_progress(t);
         if let Ok(playing) = self.internal.play() {
             self.video_controller.swap_play_button();
             Ok(self.transition())
