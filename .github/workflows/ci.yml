@@ -5,7 +5,7 @@ on:
       - master
 
 jobs:
-  build_rehash_wasm_binding_lib:
+  build_rehash_utils:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -21,11 +21,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
 
       - name: Run Cargo build
-        working-directory: ./components/wasm-bindings-lib
+        working-directory: ./components/rehash-utils
         run: cargo build
 
   build_rehash_front_end:
-    needs: build_rehash_wasm_binding_lib
+    needs: build_rehash_utils
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -58,7 +58,7 @@ jobs:
             rehash-desktop/pkg/*.js
 
   build_rehash_loader:
-    needs: build_rehash_wasm_binding_lib
+    needs: build_rehash_utils
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

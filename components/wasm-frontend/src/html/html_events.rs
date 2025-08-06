@@ -1,13 +1,10 @@
 use crate::video::event::CallbackEvent;
 use crate::video::video_internal::VideoInternal;
 use crate::video::video_player::{get_state_owned, Finished, Paused, Playing, Ready, SharedVideoPlayer, Uninitialized, VideoPlayer, VideoPlayerResult, VideoPlayerState, VideoPlayerTypeState};
-use crate::JsResult;
 use std::any::TypeId;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::Deref;
-use wasm_bindgen::JsValue;
-use wasm_bindings_lib::debug_console_log;
 
 pub use crate::prelude::*;
 pub(crate) use drag_events::*;
@@ -55,7 +52,7 @@ pub(crate) mod play_pause_event {
     where
         I: VideoInternal + 'static + Debug,
     {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             let mut cell = ctx.borrow_mut();
 
             if cell.get_type_id() == TypeId::of::<Uninitialized>() {
@@ -86,7 +83,7 @@ pub(crate) mod play_pause_event {
                     standard = get_video_player_state_return(video_finished.restart());
                 }
                 _ => {
-                    return Err(JsValue::from_str("Callback play event has incorrect type"))
+                    return Err("Callback play event has incorrect type".into())
                 }
             }
 
@@ -122,7 +119,7 @@ pub(crate) mod mute_unmute_event {
 
 
     impl CallbackEvent<SharedVideoPlayer> for MuteUnmuteEvent {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             let video_player_state = ctx.borrow();
 
             if self.is_unmuted() {
@@ -167,7 +164,7 @@ pub(crate) mod progress_bar_change_event {
     where
         I: VideoInternal + 'static + Debug,
     {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             let mut cell = ctx.borrow_mut();
 
             let id = cell.get_type_id();
@@ -206,7 +203,7 @@ pub(crate) mod settings_event {
 
     impl CallbackEvent<SharedVideoPlayer> for SettingsEvent
     {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             debug_console_log!("Triggering settings");
             Ok(())
         }
@@ -228,7 +225,7 @@ pub(crate) mod fullscreen_event {
 
     impl CallbackEvent<SharedVideoPlayer> for FullScreenEvent
     {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             debug_console_log!("Triggering fullscreen");
             Ok(())
         }
@@ -251,7 +248,7 @@ pub(crate) mod rewind_event {
 
     impl CallbackEvent<SharedVideoPlayer> for RewindEvent
     {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             let video_player = ctx.borrow();
             video_player.rewind();
             Ok(())
@@ -272,7 +269,7 @@ pub(crate) mod fast_forward_event {
     pub(crate) struct FastForwardEvent {}
 
     impl CallbackEvent<SharedVideoPlayer> for FastForwardEvent {
-        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut SharedVideoPlayer) -> RehashResultUnit {
             let video_player = ctx.borrow();
             video_player.fast_forward();
             Ok(())
@@ -492,7 +489,7 @@ pub(crate) mod drag_events {
     pub(crate) struct DragExitEvent {}
 
     impl CallbackEvent<Ctx> for DragExitEvent {
-        fn trigger(&mut self, ctx: &mut Ctx) -> JsResult<()> {
+        fn trigger(&mut self, ctx: &mut Ctx) -> RehashResultUnit {
             let ctx = ctx.borrow();
             match ctx.currently_moving.get() {
                 MoveState::ProgressBar => {

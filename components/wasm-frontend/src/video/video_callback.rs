@@ -1,3 +1,4 @@
+use crate::html::html_video::Event;
 pub(crate) use crate::video::event::CallbackEvent;
 pub(crate) use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoPlayerState, VideoPlayerTypeState};
 use std::fmt::Debug;
@@ -26,3 +27,6 @@ impl ClosureWrapperEventType for web_sys::Event {}
 impl ClosureWrapperEventType for web_sys::MouseEvent {}
 impl ClosureWrapperEventType for web_sys::KeyboardEvent {}
 impl ClosureWrapperEventType for JsValue {}
+
+
+pub(crate) type VoidParameter = Event;

@@ -3,4 +3,4 @@ members = [
     "rehash-desktop",
     "components/wasm-frontend",
     "components/wasm-loader"
-    , "components/wasm-bindings-lib"]
+    , "components/rehash-utils"]

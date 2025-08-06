@@ -1,22 +1,24 @@
 use js_sys::{Array, Function, Object, Reflect};
+use rehash_utils::errors::RehashResultUnit;
+use rehash_utils::logging::*;
+use rehash_utils::utils::{dynamic_import, set_panic_hook, tauri_read_binary_file, tauri_read_text_file, tauri_resolve_resource};
+use rehash_utils::*;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, JsValue};
-use wasm_bindgen_futures::JsFuture;
-use wasm_bindings_lib::*;
-use web_sys::{Blob, BlobPropertyBag, HtmlElement, Url};
 
+use web_sys::{Blob, BlobPropertyBag, HtmlElement, Url};
 
 pub const WASM_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 
-async fn load_wasm(name: &str) -> Result<(), JsValue> {
+async fn load_wasm(name: &str) -> RehashResultUnit {
     let js_path = format!("pkg/{}.js", name);
     let wasm_path = format!("pkg/{}_bg.wasm", name);
 
-    let js_path = JsFuture::from(tauri_resolve_resource(js_path.as_str())).await?;
+    let js_path = into_async!(tauri_resolve_resource(js_path.as_str())).await?;
     debug_console_log!("Loading frontend JS from: {}", js_path.as_string().unwrap_or("NULL".to_string()));
 
-    let content = JsFuture::from(tauri_read_text_file(js_path.as_string().unwrap().as_str())).await?;
+    let content = into_async!(tauri_read_text_file(js_path.as_string().unwrap().as_str())).await?;
     let blob_options = BlobPropertyBag::new();
     blob_options.set_type("application/javascript");
 
@@ -28,14 +30,12 @@ async fn load_wasm(name: &str) -> Result<(), JsValue> {
     let blob_url = Url::create_object_url_with_blob(&blob)?;
 
     debug_console_log!("Blob url {}", blob_url);
-    let options = Object::new();
-    let base_dir = JsValue::from(11u16);
-    Reflect::set(&options, &JsValue::from("baseDir"), &base_dir)?;
+    let options = into_object!("baseDir" => 11u16)?;
 
-    let wasm_blob = JsFuture::from(tauri_read_binary_file(wasm_path.as_str(), &options)).await?;
+    let wasm_blob = into_async!(tauri_read_binary_file(wasm_path.as_str(), &options)).await?;
     debug_console_log!("Wasm blob: {:?}", wasm_blob);
 
-    let module = JsFuture::from(dynamic_import(blob_url.as_str())).await?;
+    let module = into_async!(dynamic_import(blob_url.as_str())).await?;
 
     let init_fn = Reflect::get(&module, &"default".into())?;
     let init_fn = init_fn.dyn_into::<Function>()?;

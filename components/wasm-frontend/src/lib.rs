@@ -6,10 +6,12 @@ mod tauri;
 
 use crate::html::html_callback::HtmlVideoCallbackController;
 use crate::prelude::*;
+use crate::prelude::*;
 use crate::tauri::tauri_callback::FileOpenCallbackController;
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoUIController};
 use html::html_video::{HtmlVideoPlayerInternal, HtmlVideoUIController};
 use std::cell::RefCell;
+use rehash_utils::utils::{set_panic_hook, tauri_invoke};
 use std::rc::Rc;
 use video::event::CallbackController;
 use video::video_callback::*;
@@ -20,7 +22,7 @@ use web_sys::{HtmlElement, HtmlVideoElement};
 
 pub const WASM_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-type JsResult<T> = Result<T, JsValue>;
+type JsResult<T> = RehashResult<T>;
 
 #[wasm_bindgen(start)]
 pub fn main() {
@@ -28,7 +30,7 @@ pub fn main() {
 
     wasm_bindgen_futures::spawn_local(async move {
         if let Err(e) = init().await {
-            error_log!("{}", e.as_string().unwrap());
+            error_log!("{}", e.to_string());
         }
     })
 }
@@ -48,7 +50,7 @@ fn create_shared_video_player(html_controller: Rc<dyn VideoUIController<HtmlVide
 }
 
 
-async fn init() -> JsResult<()> {
+async fn init() -> RehashResultUnit {
     console_log!("WASM version: {}", WASM_VERSION);
     let window = web_sys::window().ok_or("Failed to get window")?;
     let document = window.document().ok_or("Failed to get document")?;
