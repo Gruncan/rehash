@@ -69,7 +69,7 @@ pub fn main() {
     }
 
     wasm_bindgen_futures::spawn_local(async move {
-        match load_wasm("rehash_wasm_frontend").await {
+        match load_wasm("rehash_frontend").await {
             Ok(_) => {
                 console_log!("Loaded Rehash frontend");
             },

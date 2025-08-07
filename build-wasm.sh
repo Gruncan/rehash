@@ -1,7 +1,7 @@
 cd components
 
-cd wasm-frontend
+cd rehash-frontend
 ./build-frontend.sh
 
-cd ../wasm-loader
+cd ../rehash-loader
 ./build-loader.sh
