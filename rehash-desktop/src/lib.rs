@@ -1,6 +1,7 @@
 mod video;
 
 use crate::video::{VideoStreamChunk, VideoStreamHandler, VideoStreamMeta};
+use libloading::{Library, Symbol};
 use std::fs;
 use tauri::menu::{
     AboutMetadata, Menu, MenuBuilder, MenuItem, MenuItemBuilder, Submenu, SubmenuBuilder,
@@ -40,10 +41,14 @@ async fn get_chunk(stream_handler: State<'_, VideoStreamHandler>) -> Result<Opti
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    {
+        std::env::set_var("LIBGL_ALWAYS_SOFTWARE", "1");
+    }
     println!("Desktop version: {}", DESKTOP_VERSION);
     let video_stream_handler = VideoStreamHandler::new();
 
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -83,6 +88,19 @@ pub fn run() {
         })
         .manage(video_stream_handler)
         .invoke_handler(tauri::generate_handler![wasm_log, get_desktop_build, wasm_error, create_video_stream, get_chunk])
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("error while running tauri application");
+
+
+    if let Ok(path) = app.path().resolve("codec/librehashcodec.so", BaseDirectory::Resource) {
+        println!("Loaded rehashcodec!");
+        unsafe {
+            let lib = Library::new(path).expect("Failed to loaded library");
+            let add: Symbol<unsafe extern "C" fn(i32, i32) -> i32> = lib.get(b"add").expect("Failed to load symbol");
+            let result = add(10, 20);
+            println!("Result {}", result);
+        }
+    }
+
+    app.run(|_app_handle, _event| {});
 }

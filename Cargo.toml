@@ -2,5 +2,8 @@
 members = [
     "rehash-desktop",
     "components/rehash-frontend",
-    "components/rehash-loader"
-    , "components/rehash-utils"]
+    "components/rehash-loader",
+    "components/rehash-utils",
+    "components/rehash-codec"]
+
+resolver = "3"

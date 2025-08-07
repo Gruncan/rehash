@@ -32,7 +32,8 @@
     "active": true,
     "targets": "all",
     "resources": [
-      "pkg/*"
+      "pkg/*",
+      "codec/*"
     ],
     "icon": [
       "icons/32x32.png",
