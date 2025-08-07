@@ -3,7 +3,6 @@ use crate::html::html_video::HtmlVideoPlayerInternal;
 use crate::video::video_ui::{VideoUIController, VideoUIRegister};
 use wasm_bindgen::closure::{Closure, WasmClosure};
 use wasm_bindgen::JsCast;
-use wasm_bindings_lib::debug_console_log;
 use web_sys::{Document, HtmlDivElement, HtmlSpanElement, HtmlVideoElement, SvgElement};
 
 pub use crate::prelude::*;
@@ -25,6 +24,8 @@ pub(crate) struct HtmlVideoUIController {
     fast_forward_icon: SvgElement,
     rewind_icon: SvgElement,
     volume_fill: HtmlDivElement,
+    start_dot: HtmlDivElement,
+    end_dot: HtmlDivElement,
 
 }
 
@@ -51,6 +52,7 @@ impl VideoUIController<HtmlVideoPlayerInternal> for HtmlVideoUIController {
     }
 
     fn update_progress(&self, progress: f64, duration: f64) {
+        // debug_console_log!("update_progress: {}:", progress);
         self.current_time.set_text_content(Some(format_time(progress).as_str()));
         self.total_time.set_text_content(Some(format_time(duration).as_str()));
 
@@ -67,13 +69,25 @@ impl VideoUIController<HtmlVideoPlayerInternal> for HtmlVideoUIController {
         self.volume_fill.style().set_property("width", format!("{}%", volume * 100f64).as_str())
             .expect("Failed to set volume");
     }
+
+    fn update_start_dot_position(&self, start_position: f64) {
+        debug_console_log!("Setting starting position to {}", start_position);
+        self.start_dot.style().set_property("left", format!("{}%", start_position).as_str())
+            .expect("Failed to set start_dot");
+    }
+
+    fn update_end_dot_position(&self, end_position: f64) {
+        self.end_dot.style().set_property("right", format!("{}%", end_position).as_str())
+            .expect("Failed to set end_dot");
+    }
 }
 
 #[inline]
 fn format_time(time: f64) -> String {
     let mins = (time / 60.0).floor();
     let secs = (time % 60.0).floor();
-    format!("{:02}:{:02}", mins, secs)
+    let millis = ((time % 1.0) * 100.0).round();
+    format!("{:02}:{:02}:{:02}", mins, secs, millis)
 }
 
 impl VideoUIRegister for HtmlVideoUIController {
@@ -94,16 +108,22 @@ impl VideoUIRegister for HtmlVideoUIController {
         closure.forget();
     }
 
-    fn register_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>) {
+    fn register_video_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>) {
         self.video.add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
             .expect("Failed to register global event listener");
         closure.forget();
     }
 
     fn register_element_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, id: &str, closure: Box<Closure<T>>) {
-        self.document.get_element_by_id(id).expect("Failed to find element with id")
+        self.document.get_element_by_id(id).expect(format!("Failed to find element with id {}", id).as_str())
             .add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
             .expect("Failed to register element event listener");
+        closure.forget();
+    }
+
+    fn register_doc_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>) {
+        self.document.add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
+            .expect("Failed to register global event listener");
         closure.forget();
     }
 }
@@ -120,6 +140,8 @@ impl HtmlVideoUIController {
 
     const PROGRESS_FILL: &'static str = "progress-fill";
     const PROGRESS_LEFT: &'static str = "progress-handle";
+    const PROGRESS_START_DOT: &'static str = "start-dot";
+    const PROGRESS_END_DOT: &'static str = "end-dot";
 
     const SETTINGS_ICON_ID: &'static str = "settings-icon";
     const FULLSCREEN_ICON_ID: &'static str = "fullscreen-icon";
@@ -153,6 +175,9 @@ impl HtmlVideoUIController {
 
         let volume_fill = get_element_as!(&document, Self::VOLUME_FILL_ID, HtmlDivElement);
 
+        let start_dot = get_element_as!(&document, Self::PROGRESS_START_DOT, HtmlDivElement);
+        let end_dot = get_element_as!(&document, Self::PROGRESS_END_DOT, HtmlDivElement);
+
         let video_element = get_element_as!(&document, Self::VIDEO_ID, HtmlVideoElement);
 
 
@@ -172,6 +197,12 @@ impl HtmlVideoUIController {
             fast_forward_icon,
             rewind_icon,
             volume_fill,
+            start_dot,
+            end_dot,
         }
+    }
+
+    pub fn get_document(&self) -> &Document {
+        &self.document
     }
 }

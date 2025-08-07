@@ -17,6 +17,10 @@ where
     fn update_progress(&self, progress: f64, duration: f64);
 
     fn update_volume(&self, volume: f64);
+
+    fn update_start_dot_position(&self, start_position: f64);
+
+    fn update_end_dot_position(&self, end_position: f64);
 }
 
 pub(crate) trait VideoUIRegister {
@@ -24,7 +28,9 @@ pub(crate) trait VideoUIRegister {
 
     fn register_element_event_listener<T: ?Sized + WasmClosure>(&self, ids: Vec<String>, closure: Box<Closure<T>>);
 
-    fn register_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>);
+    fn register_video_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>);
 
     fn register_element_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, id: &str, closure: Box<Closure<T>>);
+
+    fn register_doc_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>);
 }

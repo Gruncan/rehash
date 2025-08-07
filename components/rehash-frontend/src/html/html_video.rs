@@ -2,7 +2,7 @@ use crate::console_log;
 pub(crate) use crate::html::html_ui::HtmlVideoUIController;
 use crate::prelude::*;
 use crate::video::video_callback::*;
-use crate::video::video_internal::{VideoInternal, VideoResult, VideoResultUnit};
+use crate::video::video_internal::{ProgressBound, VideoInternal, VideoPlaybackSpeed, VideoResult, VideoResultUnit};
 use crate::video::video_player::{SharedVideoPlayer, VideoPlayer, VideoPlayerState};
 use std::cell::RefCell;
 use std::cmp::PartialOrd;
@@ -18,6 +18,9 @@ pub(crate) type EventT<T> = Rc<RefCell<dyn CallbackEvent<T>>>;
 #[derive(Debug)]
 pub(crate) struct HtmlVideoPlayerInternal {
     video_element: HtmlVideoElement,
+    min_video_progress: ProgressBound,
+    max_video_progress: ProgressBound,
+    video_playback_speed: VideoPlaybackSpeed,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
@@ -92,12 +95,24 @@ impl VideoInternal for HtmlVideoPlayerInternal {
         Ok(self.video_element.current_time())
     }
 
-    fn get_video_length(&self) -> VideoResult<f64> {
-        Ok(self.video_element.duration())
+    fn get_video_length(&self) -> f64 {
+        self.video_element.duration()
     }
 
-    fn set_video_progress(&self, progress: f64) {
-        self.video_element.set_current_time(progress);
+    fn set_video_progress(&self, time: f64) {
+        let max_duration = self.max_video_progress.time;
+        let min_duration = self.min_video_progress.time;
+        debug_console_log!("Time {} | max {} | min {}", time, max_duration, min_duration);
+        if time >= max_duration {
+            self.video_element.set_current_time(max_duration);
+            debug_console_log!("Set to max duration: {}", max_duration);
+        } else if time <= min_duration {
+            self.video_element.set_current_time(min_duration);
+            debug_console_log!("Set to min duration: {}", min_duration);
+        } else {
+            debug_console_log!("Set to normal");
+            self.video_element.set_current_time(time);
+        }
     }
 
     fn ready(&self) -> bool {
@@ -108,17 +123,70 @@ impl VideoInternal for HtmlVideoPlayerInternal {
     fn set_volume(&self, volume: f64) {
         self.video_element.set_volume(volume)
     }
+
+    fn set_min_progress(&mut self, percent: f64) {
+        let length = self.get_video_length();
+        let time = length * percent;
+        if time + 1f64 < self.max_video_progress.time {
+            debug_console_log!("Min progress set to: {}", percent);
+            self.min_video_progress = ProgressBound { percent, time };
+        }
+    }
+
+    fn get_min_progress(&self) -> &ProgressBound {
+        &self.min_video_progress
+    }
+
+    fn set_max_progress(&mut self, percent: f64) {
+        let length = self.get_video_length();
+        debug_console_log!("Max progress percent {}", percent);
+        let time = length * percent;
+        debug_console_log!("Time: {}", time);
+        debug_console_log!("min time: {:?}", self.min_video_progress);
+        if time - 1f64 > self.min_video_progress.time {
+            debug_console_log!("Max progress set to: {}", percent);
+            self.max_video_progress = ProgressBound { percent, time };
+        }
+    }
+
+    fn get_max_progress(&self) -> &ProgressBound {
+        &self.max_video_progress
+    }
+
+    fn set_playback_speed(&self, speed: VideoPlaybackSpeed) {
+        self.video_element.set_playback_rate(speed.get_playback_speed());
+    }
+
+    fn increment_video_speed(&mut self) {
+        self.video_playback_speed = self.video_playback_speed.increment();
+        self.set_playback_speed(self.video_playback_speed);
+    }
+
+    fn decrement_video_speed(&mut self) {
+        self.video_playback_speed = self.video_playback_speed.decrement();
+        self.set_playback_speed(self.video_playback_speed);
+    }
 }
 
 impl Clone for HtmlVideoPlayerInternal {
     fn clone(&self) -> Self {
-        Self { video_element: self.video_element.clone() }
+        Self {
+            video_element: self.video_element.clone(),
+            min_video_progress: self.min_video_progress,
+            max_video_progress: self.max_video_progress,
+            video_playback_speed: self.video_playback_speed,
+        }
     }
 }
 
 impl HtmlVideoPlayerInternal {
     pub fn new(video_element: HtmlVideoElement) -> Self {
-        Self { video_element }
+        Self {
+            video_element,
+            min_video_progress: ProgressBound::min_default(),
+            max_video_progress: ProgressBound::max_default(),
+            video_playback_speed: VideoPlaybackSpeed::Normal,
+        }
     }
 }
 
