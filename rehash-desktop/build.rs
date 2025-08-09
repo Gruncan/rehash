@@ -12,10 +12,13 @@ fn main() {
 
     let s = format!("../target/{}/{}", profile, CODEC_NAME);
     let d = format!("codec/{}", CODEC_NAME);
+    let dest = Path::new(d.as_str());
     let src = Path::new(s.as_str());
-    if !src.exists() {
-        let dest = Path::new(d.as_str());
-        fs::copy(src, dest).unwrap();
+    if !dest.exists() {
+        fs::copy(src, dest).or_else(|e| {
+            eprintln!("Failed to copy {} to {}: {}", src.display(), dest.display(), e);
+            Err(e)
+        }).unwrap();
     }
 
     tauri_build::build()
