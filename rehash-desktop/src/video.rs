@@ -1,4 +1,4 @@
-pub(crate) use rehash_utils::codec::{VideoStreamChunk, VideoStreamMeta};
+pub(crate) use rehash_codec_ffi_bindings::codec::{VideoStreamChunk, VideoStreamMeta};
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
@@ -24,8 +24,6 @@ impl VideoStreamContext {
         self.meta.current_position += increment;
     }
 }
-
-
 
 
 

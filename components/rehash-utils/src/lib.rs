@@ -5,8 +5,6 @@ pub mod errors;
 #[cfg(feature = "util")]
 pub mod wrappers;
 
-#[cfg(feature = "codec")]
-pub mod codec;
 
 #[cfg(feature = "util")]
 pub mod utils {

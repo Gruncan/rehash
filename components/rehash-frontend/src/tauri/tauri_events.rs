@@ -16,7 +16,7 @@ pub(crate) mod file_open_event {
     use crate::tauri::tauri_callback::source_open_closure::SourceOpenClosure;
     use crate::tauri::tauri_events::source_open_event::{SourceOpenEvent, SourceOpenEventCtx};
     use crate::video::video_callback::CallbackClosureWrapper;
-    use rehash_utils::codec::VideoStreamMeta;
+    use rehash_codec_ffi_bindings::codec::VideoStreamMeta;
     use rehash_utils::utils::tauri_invoke;
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -100,7 +100,7 @@ pub(crate) mod file_open_event {
 
 pub(crate) mod source_open_event {
     use super::*;
-    use rehash_utils::codec::VideoStreamChunk;
+    use rehash_codec_ffi_bindings::codec::VideoStreamChunk;
     use rehash_utils::utils::tauri_invoke;
     use wasm_bindgen::JsValue;
 

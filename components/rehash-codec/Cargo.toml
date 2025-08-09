@@ -8,3 +8,4 @@ name = "rehashcodec"
 crate-type = ["cdylib"]
 
 [dependencies]
+rehash-codec-ffi-bindings = { path = "../rehash-codec-ffi-bindings" }
