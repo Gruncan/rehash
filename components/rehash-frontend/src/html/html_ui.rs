@@ -1,6 +1,7 @@
 use crate::get_element_as;
 use crate::html::html_video::HtmlVideoPlayerInternal;
 use crate::video::video_ui::{VideoUIController, VideoUIRegister};
+use std::fmt::Debug;
 use wasm_bindgen::closure::{Closure, WasmClosure};
 use wasm_bindgen::JsCast;
 use web_sys::{Document, HtmlDivElement, HtmlSpanElement, HtmlVideoElement, SvgElement};
@@ -97,10 +98,10 @@ impl VideoUIRegister for HtmlVideoUIController {
         closure.forget();
     }
 
-    fn register_element_event_listener<T: ?Sized + WasmClosure>(&self, ids: Vec<String>, closure: Box<Closure<T>>) {
+    fn register_element_event_listener<T: ?Sized + WasmClosure, S: AsRef<str> + Debug>(&self, ids: &[S], closure: Box<Closure<T>>) {
         debug_console_log!("Registers control events: {:?}", ids);
         for key in ids {
-            if let Some(element) = self.document.get_element_by_id(key.as_str()) {
+            if let Some(element) = self.document.get_element_by_id(key.as_ref()) {
                 element.add_event_listener_with_callback("click", closure.as_ref().as_ref().unchecked_ref())
                     .expect("Failed to add click event listener");
             }
@@ -108,21 +109,21 @@ impl VideoUIRegister for HtmlVideoUIController {
         closure.forget();
     }
 
-    fn register_video_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>) {
-        self.video.add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
+    fn register_video_global_event_listener_specific<T: ?Sized + WasmClosure, S: AsRef<str>>(&self, string: S, closure: Box<Closure<T>>) {
+        self.video.add_event_listener_with_callback(string.as_ref(), closure.as_ref().as_ref().unchecked_ref())
             .expect("Failed to register global event listener");
         closure.forget();
     }
 
-    fn register_element_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, id: &str, closure: Box<Closure<T>>) {
-        self.document.get_element_by_id(id).expect(format!("Failed to find element with id {}", id).as_str())
-            .add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
+    fn register_element_event_listener_specific<T: ?Sized + WasmClosure, S: AsRef<str>>(&self, string: S, id: S, closure: Box<Closure<T>>) {
+        self.document.get_element_by_id(id.as_ref()).expect(format!("Failed to find element with id {}", id.as_ref()).as_str())
+            .add_event_listener_with_callback(string.as_ref(), closure.as_ref().as_ref().unchecked_ref())
             .expect("Failed to register element event listener");
         closure.forget();
     }
 
-    fn register_doc_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>) {
-        self.document.add_event_listener_with_callback(string, closure.as_ref().as_ref().unchecked_ref())
+    fn register_doc_global_event_listener_specific<T: ?Sized + WasmClosure, S: AsRef<str>>(&self, string: S, closure: Box<Closure<T>>) {
+        self.document.add_event_listener_with_callback(string.as_ref(), closure.as_ref().as_ref().unchecked_ref())
             .expect("Failed to register global event listener");
         closure.forget();
     }

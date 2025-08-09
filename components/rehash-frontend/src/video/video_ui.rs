@@ -26,11 +26,11 @@ where
 pub(crate) trait VideoUIRegister {
     fn register_global_event_listener<T: ?Sized + WasmClosure>(&self, closure: Box<Closure<T>>);
 
-    fn register_element_event_listener<T: ?Sized + WasmClosure>(&self, ids: Vec<String>, closure: Box<Closure<T>>);
+    fn register_element_event_listener<T: ?Sized + WasmClosure, S: AsRef<str> + Debug>(&self, ids: &[S], closure: Box<Closure<T>>);
 
-    fn register_video_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>);
+    fn register_video_global_event_listener_specific<T: ?Sized + WasmClosure, S: AsRef<str>>(&self, string: S, closure: Box<Closure<T>>);
 
-    fn register_element_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, id: &str, closure: Box<Closure<T>>);
+    fn register_element_event_listener_specific<T: ?Sized + WasmClosure, S: AsRef<str>>(&self, string: S, id: S, closure: Box<Closure<T>>);
 
-    fn register_doc_global_event_listener_specific<T: ?Sized + WasmClosure>(&self, string: &str, closure: Box<Closure<T>>);
+    fn register_doc_global_event_listener_specific<T: ?Sized + WasmClosure, S: AsRef<str>>(&self, string: S, closure: Box<Closure<T>>);
 }

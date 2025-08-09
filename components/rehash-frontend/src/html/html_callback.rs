@@ -1,7 +1,7 @@
 use crate::callback_event;
 use crate::html::html_events::*;
 use crate::html::html_ui::HtmlVideoUIController;
-use crate::html::html_video::HtmlVideoPlayerInternal;
+use crate::html::html_video::{Event, HtmlVideoPlayerInternal};
 use crate::prelude::*;
 use crate::video::event::{CallbackController, CallbackEvent};
 use crate::video::video_callback::CallbackClosureWrapper;
@@ -18,13 +18,15 @@ pub(crate) use drag_closure::*;
 pub(crate) use keyboard_closure::*;
 pub(crate) use time_update_closure::*;
 
+type KeyControlType = Rc<str>;
+
 
 pub(crate) struct HtmlVideoCallbackController {
     video_player: SharedVideoPlayer,
     ui_controller: HtmlVideoUIController,
-    callback_keyboard_events: HashMap<String, crate::html::html_video::Event>,
-    callback_control_events: HashMap<String, crate::html::html_video::Event>,
-    callback_progress_event: crate::html::html_video::Event,
+    callback_keyboard_events: HashMap<KeyControlType, Event>,
+    callback_control_events: HashMap<KeyControlType, Event>,
+    callback_progress_event: Event,
 }
 
 
@@ -37,36 +39,35 @@ impl HtmlVideoCallbackController {
     const REWIND_ID: &'static str = "rewind";
 
     pub fn new(video_player: SharedVideoPlayer, ui_controller: HtmlVideoUIController) -> Self {
-        let play_pause_event: crate::html::html_video::Event = callback_event!(PlayPauseEvent<HtmlVideoPlayerInternal>);
-        let mute_unmute_event: crate::html::html_video::Event = callback_event!(MuteUnmuteEvent);
-        let progress_event: crate::html::html_video::Event = callback_event!(ProgressBarChangeEvent<HtmlVideoPlayerInternal>);
-        let settings_event: crate::html::html_video::Event = callback_event!(SettingsEvent);
-        let fullscreen_event: crate::html::html_video::Event = callback_event!(FullScreenEvent);
+        let play_pause_event: Event = callback_event!(PlayPauseEvent<HtmlVideoPlayerInternal>);
+        let mute_unmute_event: Event = callback_event!(MuteUnmuteEvent);
+        let progress_event: Event = callback_event!(ProgressBarChangeEvent<HtmlVideoPlayerInternal>);
+        let settings_event: Event = callback_event!(SettingsEvent);
+        let fullscreen_event: Event = callback_event!(FullScreenEvent);
 
 
-
-        let fast_forward_event: crate::html::html_video::Event = callback_event!(FastForwardEvent);
-        let rewind_event: crate::html::html_video::Event = callback_event!(RewindEvent);
+        let fast_forward_event: Event = callback_event!(FastForwardEvent);
+        let rewind_event: Event = callback_event!(RewindEvent);
 
         let playback_increase = callback_event!(PlaybackSpeedEvent<PlaybackIncreaseAction>);
         let playback_decrease = callback_event!(PlaybackSpeedEvent<PlaybackDecreaseAction>);
 
-        let keyboard_events: HashMap<String, crate::html::html_video::Event> = HashMap::from([
-            ("p".to_string(), play_pause_event.clone()),
-            ("m".to_string(), mute_unmute_event.clone()),
-            ("ArrowRight".to_string(), fast_forward_event.clone()),
-            ("ArrowLeft".to_string(), rewind_event.clone()),
-            ("ArrowUp".to_string(), playback_increase.clone()),
-            ("ArrowDown".to_string(), playback_decrease.clone()),
+        let keyboard_events: HashMap<KeyControlType, Event> = HashMap::from([
+            (Rc::from("p"), play_pause_event.clone()),
+            (Rc::from("m"), mute_unmute_event.clone()),
+            (Rc::from("ArrowRight"), fast_forward_event.clone()),
+            (Rc::from("ArrowLeft"), rewind_event.clone()),
+            (Rc::from("ArrowUp"), playback_increase.clone()),
+            (Rc::from("ArrowDown"), playback_decrease.clone()),
         ]);
 
-        let control_events: HashMap<String, crate::html::html_video::Event> = HashMap::from([
-            (Self::PLAY_PAUSE_ID.to_string(), play_pause_event.clone()),
-            (Self::MUTE_UNMUTE_ID.to_string(), mute_unmute_event.clone()),
-            (Self::SETTINGS_ID.to_string(), settings_event.clone()),
-            (Self::FULLSCREEN_ID.to_string(), fullscreen_event.clone()),
-            (Self::FAST_FORWARD_ID.to_string(), fast_forward_event.clone()),
-            (Self::REWIND_ID.to_string(), rewind_event.clone()),
+        let control_events: HashMap<KeyControlType, Event> = HashMap::from([
+            (Rc::from(Self::PLAY_PAUSE_ID), play_pause_event.clone()),
+            (Rc::from(Self::MUTE_UNMUTE_ID), mute_unmute_event.clone()),
+            (Rc::from(Self::SETTINGS_ID), settings_event.clone()),
+            (Rc::from(Self::FULLSCREEN_ID), fullscreen_event.clone()),
+            (Rc::from(Self::FAST_FORWARD_ID), fast_forward_event.clone()),
+            (Rc::from(Self::REWIND_ID), rewind_event.clone()),
         ]);
 
 
@@ -90,8 +91,9 @@ impl CallbackController for HtmlVideoCallbackController {
 
         let control = Box::new(ControlClosure::new(self.video_player.clone(), self.callback_control_events.clone()));
         let control_closure = CallbackClosureWrapper::create_callback(control);
-        let keys: Vec<String> = self.callback_control_events.iter().map(|(k, _)| k.clone()).collect();
-        self.ui_controller.register_element_event_listener(keys, control_closure);
+
+        let keys: Vec<&str> = self.callback_control_events.iter().map(|(k, _)| k.as_ref()).collect();
+        self.ui_controller.register_element_event_listener(&keys, control_closure);
 
 
         let time_update = Box::new(TimeUpdateClosure::new(self.video_player.clone(), self.callback_progress_event.clone()));
@@ -365,11 +367,11 @@ mod control_closure {
     #[derive(Debug)]
     pub(crate) struct ControlClosure {
         ctx: Ctx,
-        control_callbacks: HashMap<String, Callback>,
+        control_callbacks: HashMap<KeyControlType, Callback>,
     }
 
     impl ControlClosure {
-        pub(crate) fn new(ctx: Ctx, control_callbacks: HashMap<String, Callback>) -> Self {
+        pub(crate) fn new(ctx: Ctx, control_callbacks: HashMap<KeyControlType, Callback>) -> Self {
             Self {
                 ctx,
                 control_callbacks,
@@ -384,7 +386,7 @@ mod control_closure {
 
             if let Some(element) = target.dyn_ref::<Element>() {
                 let id = element.id();
-                if let Some(callback_ref) = self.control_callbacks.get(&id) {
+                if let Some(callback_ref) = self.control_callbacks.get(id.as_str()) {
                     let mut callback = callback_ref.borrow_mut();
                     let _ = callback.trigger(&mut self.ctx);
                 }
@@ -402,12 +404,12 @@ mod keyboard_closure {
     #[derive(Debug)]
     pub(crate) struct KeyboardClosure {
         ctx: Ctx,
-        keyboard_callbacks: HashMap<String, Callback>,
+        keyboard_callbacks: HashMap<KeyControlType, Callback>,
     }
 
 
     impl KeyboardClosure {
-        pub(crate) fn new(ctx: Ctx, keyboard_callbacks: HashMap<String, Callback>) -> Self {
+        pub(crate) fn new(ctx: Ctx, keyboard_callbacks: HashMap<KeyControlType, Callback>) -> Self {
             Self {
                 ctx,
                 keyboard_callbacks,
@@ -420,11 +422,11 @@ mod keyboard_closure {
             let key = event.key();
             #[cfg(not(debug_assertions))]
             {
-                if !d.contains_key(&key) {
+                if !self.keyboard_callbacks.contains_key(key.as_str()) {
                     event.prevent_default();
                 }
             }
-            if let Some(callback_ref) = self.keyboard_callbacks.get(&key) {
+            if let Some(callback_ref) = self.keyboard_callbacks.get(key.as_str()) {
                 let mut callback = callback_ref.borrow_mut();
                 let _ = callback.trigger(&mut self.ctx);
             }
