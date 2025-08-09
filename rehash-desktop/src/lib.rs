@@ -13,6 +13,12 @@ use tauri_plugin_dialog::{DialogExt, FileDialogBuilder, FilePath};
 
 pub const DESKTOP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[cfg(target_os = "linux")]
+const CODEC_NAME: &str = "librehashcodec.so";
+
+#[cfg(target_os = "windows")]
+const CODEC_NAME: &str = "librehashcodec.dll";
+
 #[tauri::command]
 fn get_desktop_build() -> &'static str {
     DESKTOP_VERSION
@@ -92,7 +98,7 @@ pub fn run() {
         .expect("error while running tauri application");
 
 
-    if let Ok(path) = app.path().resolve("codec/librehashcodec.so", BaseDirectory::Resource) {
+    if let Ok(path) = app.path().resolve(format!("codec/{}", CODEC_NAME), BaseDirectory::Resource) {
         println!("Loaded rehashcodec!");
         unsafe {
             let lib = Library::new(path).expect("Failed to loaded library");
