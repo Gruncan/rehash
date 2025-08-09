@@ -16,7 +16,7 @@ async fn load_wasm(name: &str) -> RehashResultUnit {
     let wasm_path = format!("pkg/{}_bg.wasm", name);
 
     let js_path = into_async!(tauri_resolve_resource(js_path.as_str())).await?;
-    debug_console_log!("Loading frontend JS from: {}", js_path.as_string().unwrap_or("NULL".to_string()));
+    // debug_console_log!("Loading frontend JS from: {}", js_path.as_string().unwrap_or("NULL".to_string()));
 
     let content = into_async!(tauri_read_text_file(js_path.as_string().unwrap().as_str())).await?;
     let blob_options = BlobPropertyBag::new();
@@ -29,11 +29,9 @@ async fn load_wasm(name: &str) -> RehashResultUnit {
 
     let blob_url = Url::create_object_url_with_blob(&blob)?;
 
-    debug_console_log!("Blob url {}", blob_url);
     let options = into_object!("baseDir" => 11u16)?;
 
     let wasm_blob = into_async!(tauri_read_binary_file(wasm_path.as_str(), &options)).await?;
-    debug_console_log!("Wasm blob: {:?}", wasm_blob);
 
     let module = into_async!(dynamic_import(blob_url.as_str())).await?;
 
