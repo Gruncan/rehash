@@ -1,4 +1,5 @@
 pub mod codec;
+pub mod codec_ffi;
 
 use libloading::{Library, Symbol};
 
