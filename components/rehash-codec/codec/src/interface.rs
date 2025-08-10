@@ -9,3 +9,10 @@ fn add(left: u64, right: u64) -> u64 {
 fn sub(left: u64, right: u64) -> u64 {
     left - right
 }
+
+fn test() {}
+
+#[rehash_codec_ffi]
+fn sub2(left: u64, right: u64) -> u64 {
+    left - right
+}

@@ -1,9 +1,10 @@
+use proc_macro2::Literal;
 use std::fs::{read_to_string, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use syn::__private::quote::quote;
 use syn::__private::ToTokens;
-use syn::{parse_file, Attribute, Item};
+use syn::{parse_file, Attribute, FnArg, Item, Pat, PatIdent};
 
 const FFI_OUT_PATH: &'static str = "src/";
 const FFI_FILE_NAME: &'static str = "codec_ffi.rs";
@@ -40,11 +41,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let inputs = &func.sig.inputs;
         let outputs = &func.sig.output;
         // let generics = &input_fn.sig.generics;
-        let block = &func.block;
+
+        let func_input_types = inputs.iter().filter_map(|fn_arg| {
+            if let FnArg::Typed(pat_type) = fn_arg {
+                Some(pat_type.ty.clone())
+            } else {
+                None
+            }
+        });
+
+        let func_input_parameters = inputs.iter().filter_map(|fn_arg| {
+            if let FnArg::Typed(pat_type) = fn_arg {
+                match *pat_type.pat {
+                    Pat::Ident(PatIdent { ref ident, .. }) => Some(ident.clone()),
+                    _ => None,
+                }
+            } else {
+                None
+            }
+        });
+
+        let fn_name_str = Literal::byte_string(fn_name.to_string().as_bytes());
+
         let fn_ffi_gen = quote! {
-            #[unsafe(no_mangle)]
-            pub unsafe extern "C" fn #fn_name(#inputs) #outputs
-                    #block
+            pub fn #fn_name(&self, #inputs) #outputs {
+                unsafe {
+                    let func: Symbol<unsafe extern "C" fn(#(#func_input_types),*) #outputs> = self.lib.get(#fn_name_str).expect("Failed to load symbol");
+                    func(#(#func_input_parameters),*)
+                }
+            }
         };
         fn_ffi_gen
     }).collect::<Vec<_>>();
@@ -58,9 +83,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .write(true)
         .open(out_path).expect("Failed to open output file");
 
-    for func in generated_code {
-        writeln!(&mut file, "{}\n", func)?;
-    }
+    writeln!(&mut file, "{}\n", quote! {
+        // GENERATED
+        use libloading::Symbol;
+        use crate::RehashCodecLibrary;
+    })?;
+
+    let generated_code = quote! {
+        impl RehashCodecLibrary {
+            #(#generated_code)*
+        }
+    };
+
+
+    writeln!(&mut file, "{}", generated_code)?;
+
 
     Ok(())
 }

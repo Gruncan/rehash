@@ -99,7 +99,9 @@ pub fn run() {
 
 
     if let Ok(path) = app.path().resolve(format!("codec/{}", CODEC_NAME), BaseDirectory::Resource) {
-        RehashCodecLibrary::new(&path.to_str().unwrap());
+        let rehash_codec = RehashCodecLibrary::new(&path.to_str().unwrap());
+        let result = rehash_codec.add(10, 20);
+        println!("Result: {}", result);
     }
 
     app.run(|_app_handle, _event| {});
