@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let fn_name = &func.sig.ident;
         let inputs = &func.sig.inputs;
         let outputs = &func.sig.output;
-        // let generics = &input_fn.sig.generics;
+        // let generics = &func.sig.generics;
 
         let func_input_types = inputs.iter().filter_map(|fn_arg| {
             if let FnArg::Typed(pat_type) = fn_arg {
