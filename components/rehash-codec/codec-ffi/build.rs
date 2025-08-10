@@ -2,6 +2,7 @@ use proc_macro2::Literal;
 use std::fs::{read_to_string, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use syn::__private::quote::quote;
 use syn::__private::ToTokens;
 use syn::{parse_file, Attribute, FnArg, Item, Pat, PatIdent};
@@ -13,11 +14,22 @@ const FFI_IN_PATH: &'static str = "../codec/src/interface.rs";
 
 const FFI_STUB_NAME: &'static str = "rehash_codec_ffi";
 
-
 fn has_ffi_stub_attribute(attrs: &[Attribute]) -> bool {
     attrs.iter().any(|a| a.path().is_ident(FFI_STUB_NAME))
 }
 
+fn run_rust_fmt(path: &Path) -> std::io::Result<()> {
+    eprintln!("Running rustfmt at {}", path.display());
+    let status = Command::new("rustfmt").arg(path).status()?;
+    if !status.success() {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("Failed to run rustfmt, status: {}", status),
+        ))
+    } else {
+        Ok(())
+    }
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed={}", FFI_IN_PATH);
@@ -74,14 +86,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         fn_ffi_gen
     }).collect::<Vec<_>>();
 
-
     let out_dir = PathBuf::from(FFI_OUT_PATH);
     let out_path = Path::new(&out_dir).join(FFI_FILE_NAME);
 
     let mut file = OpenOptions::new()
         .create(true)
         .write(true)
-        .open(out_path).expect("Failed to open output file");
+        .open(&out_path)
+        .expect("Failed to open output file");
 
     writeln!(&mut file, "{}\n", quote! {
         // GENERATED
@@ -95,9 +107,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-
     writeln!(&mut file, "{}", generated_code)?;
+    file.flush()?;
+    file.sync_all()?;
+    drop(file);
 
+    if let Some(dir) = out_path.parent() {
+        let dir = OpenOptions::new().read(true).open(dir)?;
+        dir.sync_all()?;
+    }
+
+    // run_rust_fmt(&out_path.to_path_buf())?;
 
     Ok(())
 }
