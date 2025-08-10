@@ -1,7 +1,7 @@
 mod video;
 
 use crate::video::{VideoStreamChunk, VideoStreamHandler, VideoStreamMeta};
-use rehash_codec_ffi_bindings::RehashCodecLibrary;
+use libloading::{Library, Symbol};
 use std::fs;
 use tauri::menu::{
     AboutMetadata, Menu, MenuBuilder, MenuItem, MenuItemBuilder, Submenu, SubmenuBuilder,
@@ -99,7 +99,12 @@ pub fn run() {
 
 
     if let Ok(path) = app.path().resolve(format!("codec/{}", CODEC_NAME), BaseDirectory::Resource) {
-        RehashCodecLibrary::new(&path.to_str().unwrap());
+        unsafe {
+            let lib = Library::new(path).expect("Failed to loaded library");
+            let add: Symbol<unsafe extern "C" fn(i32, i32) -> i32> = lib.get(b"add").expect("Failed to load symbol");
+            let result = add(10, 20);
+            println!("Result {}", result);
+        }
     }
 
     app.run(|_app_handle, _event| {});

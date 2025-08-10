@@ -4,8 +4,9 @@ members = [
     "components/rehash-frontend",
     "components/rehash-loader",
     "components/rehash-utils",
-    "components/rehash-codec",
-    "components/rehash-codec-ffi-bindings"
+    "components/rehash-codec/codec",
+    "components/rehash-codec/codec-ffi",
+    "components/rehash-codec/codec-proc-macro"
 ]
 
 resolver = "3"

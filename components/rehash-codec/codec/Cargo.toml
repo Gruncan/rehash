@@ -1,5 +1,5 @@
 [package]
-name = "rehash-codec"
+name = "codec"
 version = "0.1.0"
 edition = "2024"
 
@@ -8,4 +8,4 @@ name = "rehashcodec"
 crate-type = ["cdylib"]
 
 [dependencies]
-rehash-codec-ffi-bindings = { path = "../rehash-codec-ffi-bindings" }
+codec-proc-macro = { path = "../codec-proc-macro" }
