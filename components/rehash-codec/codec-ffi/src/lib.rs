@@ -1,14 +1,21 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+pub mod codec;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+use libloading::{Library, Symbol};
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+pub struct RehashCodecLibrary<'a>(&'a str);
+
+
+impl<'a> RehashCodecLibrary<'a> {
+    pub fn new<T: AsRef<str>>(path: &'a T) -> Self {
+        println!("Loaded rehashcodec!");
+        unsafe {
+            let lib = Library::new(path.as_ref()).expect("Failed to loaded library");
+            let add: Symbol<unsafe extern "C" fn(i32, i32) -> i32> = lib.get(b"add").expect("Failed to load symbol");
+            let result = add(10, 20);
+            println!("Result {}", result);
+        }
+        Self {
+            0: path.as_ref()
+        }
     }
 }
