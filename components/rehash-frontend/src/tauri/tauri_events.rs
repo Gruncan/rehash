@@ -8,6 +8,31 @@ use web_sys::{HtmlVideoElement, Url};
 
 pub use crate::prelude::*;
 
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VideoStreamMeta {
+    pub file_path: String,
+    pub current_position: u64,
+    pub total_size: u64,
+    pub chunk_size: usize,
+}
+
+
+impl VideoStreamMeta {
+    pub fn new(file_path: String, current_position: u64, total_size: u64, chunk_size: usize) -> Self {
+        Self { file_path, current_position, total_size, chunk_size }
+    }
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VideoStreamChunk {
+    pub bytes: Vec<u8>,
+    pub position: u64,
+    pub is_final: bool,
+}
+
+
 pub(crate) type FileOpenEventCtxType = Arc<Mutex<FileOpenEventCtx>>;
 
 
@@ -16,7 +41,6 @@ pub(crate) mod file_open_event {
     use crate::tauri::tauri_callback::source_open_closure::SourceOpenClosure;
     use crate::tauri::tauri_events::source_open_event::{SourceOpenEvent, SourceOpenEventCtx};
     use crate::video::video_callback::CallbackClosureWrapper;
-    use rehash_codec_ffi::codec::VideoStreamMeta;
     use rehash_utils::utils::tauri_invoke;
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -100,7 +124,6 @@ pub(crate) mod file_open_event {
 
 pub(crate) mod source_open_event {
     use super::*;
-    use rehash_codec_ffi::codec::VideoStreamChunk;
     use rehash_utils::utils::tauri_invoke;
     use wasm_bindgen::JsValue;
 

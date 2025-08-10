@@ -13,7 +13,6 @@ impl RehashCodecLibrary {
         let lib = unsafe {
             Library::new(path.as_ref()).expect("Failed to loaded library")
         };
-        println!("Loaded {}", path.as_ref());
         Self {
             lib
         }

@@ -99,6 +99,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // GENERATED
         use libloading::Symbol;
         use crate::RehashCodecLibrary;
+        use std::ffi::{c_char};
     })?;
 
     let generated_code = quote! {

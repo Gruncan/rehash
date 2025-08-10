@@ -8,6 +8,7 @@ const CODEC_NAME: &str = "librehashcodec.so";
 const CODEC_NAME: &str = "librehashcodec.dll";
 
 fn main() {
+    // println!("cargo:rerun-if-changed=.");
     let profile = env::var("PROFILE").unwrap();
 
     let s = format!("../target/{}/{}", profile, CODEC_NAME);
