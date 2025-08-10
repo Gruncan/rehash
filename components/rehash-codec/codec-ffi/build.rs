@@ -33,7 +33,7 @@ fn run_rust_fmt(path: &Path) -> std::io::Result<()> {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed={}", FFI_IN_PATH);
-    println!("cargo:rerun-if-changed=.");
+    // println!("cargo:rerun-if-changed=.");
     let src_path = Path::new(FFI_IN_PATH);
     let mut fn_to_gen = Vec::new();
 
