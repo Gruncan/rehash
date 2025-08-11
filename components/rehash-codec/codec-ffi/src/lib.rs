@@ -14,7 +14,7 @@ pub mod rehash_codec_library {
     use windows_sys::Win32::System::LibraryLoader::{AddDllDirectory, SetDefaultDllDirectories, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR};
 
     pub struct RehashCodecLibrary {
-        pub lib: libloading::Library,
+        pub lib: Library,
     }
 
     impl RehashCodecLibrary {

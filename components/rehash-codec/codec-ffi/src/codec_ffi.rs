@@ -1,4 +1,4 @@
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 use libloading::Symbol;
 
 #[cfg(target_os = "windows")]
