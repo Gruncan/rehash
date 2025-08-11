@@ -1,10 +1,10 @@
-use crate::RehashCodecLibrary;
-
 #[cfg(unix)]
 use libloading::Symbol;
 
 #[cfg(target_os = "windows")]
 use libloading::os::windows::Symbol;
+
+use crate::RehashCodecLibrary;
 
 impl RehashCodecLibrary {
     pub fn print_codec_version(&self) {

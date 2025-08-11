@@ -13,8 +13,16 @@ fn print_codec_version() {
 }
 
 
+#[cfg(target_os = "windows")]
 const RED_VIDEO: &'static str = "C:\\Development\\Rust\\rehash\\components\\rehash-codec\\codec\\tests\\resources\\red.mp4";
+#[cfg(target_os = "windows")]
 const GREEN_OUT_VIDEO: &'static str = "C:\\Development\\Rust\\rehash\\components\\rehash-codec\\codec\\tests\\resources\\green_out_test.mp4";
+
+#[cfg(target_os = "linux")]
+const RED_VIDEO: &'static str = "/home/duncan/Development/Rust/rehash/components/rehash-codec/codec/tests/resources/red.mp4";
+#[cfg(target_os = "linux")]
+const GREEN_OUT_VIDEO: &'static str = "/home/duncan/Development/Rust/rehash/components/rehash-codec/codec/tests/resources/green_out_test.mp4";
+
 
 fn write_packet_stream(encoder: &mut ffmpeg_next::encoder::video::Video, outx: &mut Output, stream_index: usize) -> Result<(), Box<dyn std::error::Error>> {
     let mut encoded = ffmpeg_next::Packet::empty();
