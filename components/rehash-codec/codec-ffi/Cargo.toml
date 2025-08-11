@@ -7,6 +7,10 @@ edition = "2024"
 libloading = "0.8.8"
 serde = { version = "1.0.219", features = ["derive"] }
 
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60.2", features = ["Win32_System_LibraryLoader"] }
+
 [build-dependencies]
 syn = { version = "2.0.104", features = ["full"] }
 proc-macro2 = "1.0.95"

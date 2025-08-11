@@ -3,6 +3,7 @@ mod video;
 use crate::video::{VideoStreamChunk, VideoStreamHandler, VideoStreamMeta};
 use rehash_codec_ffi::RehashCodecLibrary;
 use std::fs;
+use std::path::{Path, PathBuf};
 use tauri::menu::{
     AboutMetadata, Menu, MenuBuilder, MenuItem, MenuItemBuilder, Submenu, SubmenuBuilder,
 };
@@ -101,6 +102,7 @@ pub fn run() {
     if let Ok(path) = app.path().resolve(format!("codec/{}", CODEC_NAME), BaseDirectory::Resource) {
         let rehash_codec = RehashCodecLibrary::new(&path.to_str().unwrap());
         rehash_codec.print_codec_version();
+        rehash_codec.run_codec_test();
     }
 
     app.run(|_app_handle, _event| {});
