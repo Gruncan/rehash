@@ -17,10 +17,12 @@ case "$input" in
 esac
 
 
-cd components || exit 1
+cd ../components || exit 1
 
 cd rehash-frontend || exit 1
 ./build-frontend.sh $target
 
 cd ../rehash-loader || exit 1
 ./build-loader.sh $target
+
+cd ../../scripts || exit 1
