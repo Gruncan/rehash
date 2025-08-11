@@ -18,7 +18,7 @@ pub const DESKTOP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const CODEC_NAME: &str = "librehashcodec.so";
 
 #[cfg(target_os = "windows")]
-const CODEC_NAME: &str = "librehashcodec.dll";
+const CODEC_NAME: &str = "rehashcodec.dll";
 
 #[tauri::command]
 fn get_desktop_build() -> &'static str {
