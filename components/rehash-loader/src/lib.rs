@@ -59,6 +59,12 @@ pub fn main() {
         let window = web_sys::window().ok_or("Failed to get window").unwrap();
         let document = window.document().ok_or("Failed to get document").unwrap();
 
+        let debug_version_container = document.get_element_by_id("debug-version-container")
+            .unwrap()
+            .dyn_into::<HtmlElement>().unwrap();
+
+        debug_version_container.style().set_property("display", "block").expect("Failed to display debug versions");
+
         let version_header = document.get_element_by_id("build-loader")
             .unwrap()
             .dyn_into::<HtmlElement>().unwrap();
