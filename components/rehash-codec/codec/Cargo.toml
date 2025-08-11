@@ -9,3 +9,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 rehash-codec-proc-macro = { path = "../codec-proc-macro" }
+ffmpeg-next = "7.1.0"

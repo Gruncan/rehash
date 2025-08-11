@@ -1,0 +1,1 @@
+sudo apt-get install libavutil-dev libavformat-dev libavfilter-dev libavdevice-dev
