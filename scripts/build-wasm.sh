@@ -9,10 +9,10 @@ fi
 
 case "$input" in
   release )
-    target="--release"
+    target="release"
     ;;
   * )
-    target="--debug"
+    target="debug"
         ;;
 esac
 
