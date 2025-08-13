@@ -36,15 +36,23 @@ fn wasm_error(message: String) {
 }
 
 
-#[tauri::command]
-async fn create_video_stream(stream_handler: State<'_, VideoStreamHandler>, path: String) -> Result<VideoStreamMeta, String> {
-    stream_handler.create_stream(path, 200).await
-}
 
 #[tauri::command]
-async fn get_chunk(stream_handler: State<'_, VideoStreamHandler>) -> Result<Option<VideoStreamChunk>, String> {
-    stream_handler.read_chunk().await
+async fn get_video_bytes(path: String) -> Result<Vec<u8>, String> {
+    println!("Reading video file: {}", path);
+
+    match fs::read(&path) {
+        Ok(data) => {
+            println!("Successfully read {} bytes", data.len());
+            Ok(data)
+        }
+        Err(e) => {
+            println!("Error reading file: {}", e);
+            Err(e.to_string())
+        }
+    }
 }
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -94,7 +102,7 @@ pub fn run() {
             Ok(())
         })
         .manage(video_stream_handler)
-        .invoke_handler(tauri::generate_handler![wasm_log, get_desktop_build, wasm_error, create_video_stream, get_chunk])
+        .invoke_handler(tauri::generate_handler![wasm_log, get_desktop_build, wasm_error])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
 
@@ -102,7 +110,6 @@ pub fn run() {
     if let Ok(path) = app.path().resolve(format!("codec/{}", CODEC_NAME), BaseDirectory::Resource) {
         let rehash_codec = RehashCodecLibrary::new(&path.to_str().unwrap());
         rehash_codec.print_codec_version();
-        rehash_codec.run_codec_test();
     }
 
     app.run(|_app_handle, _event| {});

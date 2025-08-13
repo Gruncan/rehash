@@ -15,13 +15,4 @@ impl RehashCodecLibrary {
             func()
         }
     }
-    pub fn run_codec_test(&self) {
-        unsafe {
-            let func: Symbol<unsafe extern "C" fn()> = self
-                .lib
-                .get(b"run_codec_test")
-                .expect("Failed to load symbol");
-            func()
-        }
-    }
 }
