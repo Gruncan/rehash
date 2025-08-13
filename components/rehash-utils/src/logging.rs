@@ -1,5 +1,5 @@
-use crate::utils::tauri_invoke;
 use crate::into_object;
+use crate::utils::tauri_invoke;
 use wasm_bindgen::JsValue;
 
 #[cfg(feature = "tauri")]
@@ -60,7 +60,15 @@ macro_rules! debug_console_log {
     ($($t:tt)*) => {
         #[cfg(debug_assertions)]
         {
-            log_to_tauri(&format_args!("[DEBUG] {}", format_args!($($t)*)).to_string())
+            #[cfg(feature = "log_timestamp")]
+            let timestamp = {
+                let now = chrono::Local::now();
+                now.format("%Y-%m-%d %H:%M:%S").to_string()
+            };
+
+            #[cfg(not(feature = "log_timestamp"))]
+            let timestamp = "";
+            log_to_tauri(&format_args!("[{} | DEBUG] {}", timestamp, format_args!($($t)*)).to_string())
         }
     };
 }

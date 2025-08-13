@@ -9,6 +9,7 @@ js-sys = "0.3"
 wasm-bindgen-futures = "0.4.50"
 log = "0.4.27"
 serde = { version = "1.0.219", features = ["derive"] }
+chrono = "0.4.41"
 
 [dependencies.web-sys]
 version = "0.3"

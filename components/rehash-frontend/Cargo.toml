@@ -14,6 +14,7 @@ rehash-utils = { path = "../rehash-utils", features = ["tauri"] }
 #rehash-codec-ffi = { path = "../rehash-codec/codec-ffi" }
 serde = { version = "1.0.219", features = ["derive"] }
 serde-wasm-bindgen = "0.6.5"
+chrono = "0.4.41"
 
 [dependencies.web-sys]
 version = "0.3"
@@ -21,3 +22,6 @@ features = ["console", "Document", "Element", "HtmlElement", "HtmlVideoElement",
     "Window", "FileList", "File", "Url", "Event", "EventTarget", "KeyboardEvent", "MouseEvent", "DomRect", "SvgElement",
     "CssStyleDeclaration", "HtmlSpanElement", "BlobPropertyBag", "HtmlDivElement", "MediaSource", "SourceBuffer", "DomTokenList"
 ]
+
+[features]
+log_timestamp = []
