@@ -1,6 +1,6 @@
 use crate::video::event::CallbackEvent;
 use crate::JsResult;
-use js_sys::{Array, Reflect};
+use js_sys::Reflect;
 use rehash_utils::utils::tauri_invoke;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen_futures::{spawn_local, JsFuture};
@@ -13,6 +13,7 @@ pub(crate) type FileOpenEventCtxType = Arc<Mutex<FileOpenEventCtx>>;
 
 pub(crate) mod file_open_event {
     use super::*;
+    use wasm_bindgen::JsValue;
 
     #[derive(Debug, Clone)]
     pub(crate) struct FileOpenEvent {}
@@ -59,14 +60,40 @@ pub(crate) mod file_open_event {
         let args = js_sys::Object::new();
         Reflect::set(&args, &"path".into(), &file_path.into()).unwrap();
 
-        match JsFuture::from(tauri_invoke("get_video_bytes", args.into())).await {
-            Ok(result) => {
-                let uint8_array = js_sys::Uint8Array::new(&result);
-                debug_console_log!("Received {} bytes", uint8_array.length());
 
-                let array = Array::new();
-                array.push(&uint8_array);
+        match JsFuture::from(tauri_invoke("get_video", args.into())).await {
+            Ok(js_length) => {
+                let mut length = js_length.as_f64().expect("Expected a number") as u32;
+                debug_console_log!("File frontend length: {}", length);
+                let mut vec = Vec::with_capacity(length as usize);
+                let mut i = 0;
+                while length > 0 {
+                    match JsFuture::from(tauri_invoke("get_video_chunk", JsValue::NULL)).await {
+                        Ok(js_chunk) => {
+                            let uint8_array = js_sys::Uint8Array::new(&js_chunk);
+                            let chunk_length = uint8_array.length();
+                            debug_console_log!("{}| Received chunk {} bytes", i, chunk_length);
+                            let mut chunk_vec = vec![0u8; chunk_length as usize];
+                            uint8_array.copy_to(&mut chunk_vec);
+                            vec.extend_from_slice(&chunk_vec);
+                            i += 1;
+                            length -= chunk_length;
+                        },
+                        Err(e) => {
+                            debug_console_log!("Failed to load read chunk: {}", i+1);
+                            debug_console_log!("{:?}", e);
+                            break
+                        }
+                    }
+                }
 
+                let final_array = js_sys::Uint8Array::new_with_length(vec.len() as u32);
+                final_array.copy_from(&vec);
+
+                let array = js_sys::Array::new();
+                array.push(&final_array);
+
+                debug_console_log!("File final length: {}", array.length());
                 let blob_options = BlobPropertyBag::new();
                 blob_options.set_type("video/mp4");
 

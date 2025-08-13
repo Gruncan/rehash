@@ -1,9 +1,11 @@
 mod video;
 
-use crate::video::{VideoStreamChunk, VideoStreamHandler, VideoStreamMeta};
+use crate::video::VideoState;
 use rehash_codec_ffi::RehashCodecLibrary;
+use std::ffi::CString;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use tauri::menu::{
     AboutMetadata, Menu, MenuBuilder, MenuItem, MenuItemBuilder, Submenu, SubmenuBuilder,
 };
@@ -35,23 +37,31 @@ fn wasm_error(message: String) {
     eprintln!("[WASM] {}", message);
 }
 
+#[tauri::command]
+fn get_video(state: State<VideoState>, path: String) -> Result<usize, String> {
+    let codec = state.codec.lock().unwrap();
+    let c_path = CString::new(path).expect("CString::new failed");
+    let mut len: usize = 0;
+    let data_ptr = codec.get_bytes_from_video(c_path.as_ptr(), &mut len as *mut usize);
 
+    if data_ptr.is_null() {
+        return Err(String::from("Failed to get video data"));
+    }
+
+    let bytes: Vec<u8> = unsafe {
+        Vec::from_raw_parts(data_ptr, len, len)
+    };
+    state.set_bytes(bytes);
+
+    Ok(len)
+}
 
 #[tauri::command]
-async fn get_video_bytes(path: String) -> Result<Vec<u8>, String> {
-    println!("Reading video file: {}", path);
-
-    match fs::read(&path) {
-        Ok(data) => {
-            println!("Successfully read {} bytes", data.len());
-            Ok(data)
-        }
-        Err(e) => {
-            println!("Error reading file: {}", e);
-            Err(e.to_string())
-        }
-    }
+fn get_video_chunk(state: State<VideoState>) -> Result<Vec<u8>, String> {
+    let bytes = state.get_bytes().ok_or("Failed to get video data".into());
+    bytes
 }
+
 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -61,7 +71,6 @@ pub fn run() {
         std::env::set_var("LIBGL_ALWAYS_SOFTWARE", "1");
     }
     println!("Desktop version: {}", DESKTOP_VERSION);
-    let video_stream_handler = VideoStreamHandler::new();
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
@@ -101,8 +110,7 @@ pub fn run() {
 
             Ok(())
         })
-        .manage(video_stream_handler)
-        .invoke_handler(tauri::generate_handler![wasm_log, get_desktop_build, wasm_error])
+        .invoke_handler(tauri::generate_handler![wasm_log, get_desktop_build, wasm_error, get_video, get_video_chunk])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
 
@@ -110,6 +118,7 @@ pub fn run() {
     if let Ok(path) = app.path().resolve(format!("codec/{}", CODEC_NAME), BaseDirectory::Resource) {
         let rehash_codec = RehashCodecLibrary::new(&path.to_str().unwrap());
         rehash_codec.print_codec_version();
+        app.manage(VideoState::new(rehash_codec));
     }
 
     app.run(|_app_handle, _event| {});

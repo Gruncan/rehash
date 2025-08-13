@@ -106,6 +106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         use libloading::os::windows::Symbol;
 
         use crate::RehashCodecLibrary;
+        use std::ffi::{c_char, c_uchar};
     })?;
 
     let generated_code = quote! {
