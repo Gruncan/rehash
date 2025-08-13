@@ -53,10 +53,10 @@ impl HtmlVideoCallbackController {
         let playback_decrease = callback_event!(PlaybackSpeedEvent<PlaybackDecreaseAction>);
 
         let keyboard_events: HashMap<KeyControlType, Event> = HashMap::from([
-            (Rc::from("p"), play_pause_event.clone()),
+            (Rc::from("Space"), play_pause_event.clone()),
             (Rc::from("m"), mute_unmute_event.clone()),
-            (Rc::from("ArrowRight"), fast_forward_event.clone()),
-            (Rc::from("ArrowLeft"), rewind_event.clone()),
+            (Rc::from("v"), fast_forward_event.clone()),
+            (Rc::from("z"), rewind_event.clone()),
             (Rc::from("ArrowUp"), playback_increase.clone()),
             (Rc::from("ArrowDown"), playback_decrease.clone()),
         ]);
