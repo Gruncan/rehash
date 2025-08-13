@@ -17,8 +17,6 @@
         "resizable": true,
         "fullscreen": false,
         "devtools": false,
-        "zoom-hotkeys-enabled": false,
-        "browser-extensions-enabled": false,
         "label": "main"
       }
     ],
