@@ -207,3 +207,51 @@ impl HtmlVideoUIController {
         &self.document
     }
 }
+
+#[derive(Debug, Clone)]
+pub(crate) struct HtmlLoadBar {
+    overlay: HtmlDivElement,
+    load_fill: HtmlDivElement,
+    load_percentage_text: HtmlSpanElement,
+}
+
+impl HtmlLoadBar {
+    const OVERLAY_ID: &'static str = "load-overlay";
+    const LOAD_FILL: &'static str = "load-progress-fill";
+    const LOAD_PERCENTAGE_TEXT: &'static str = "load-percentage-text";
+
+
+    pub fn new(document: &Document) -> Self {
+        let overlay = document.get_element_by_id(Self::OVERLAY_ID).unwrap()
+            .dyn_into::<HtmlDivElement>().expect("Failed to get overlay as div");
+        let load_fill = document.get_element_by_id(Self::LOAD_FILL).unwrap()
+            .dyn_into::<HtmlDivElement>().expect("Failed to get load fill as div");
+        let load_percentage_text = document.get_element_by_id(Self::LOAD_PERCENTAGE_TEXT).unwrap()
+            .dyn_into::<HtmlSpanElement>().expect("Failed to get load percentage as div");
+
+        Self {
+            overlay,
+            load_fill,
+            load_percentage_text,
+        }
+    }
+
+    pub fn update_progress(&self, progress: f64, duration: f64) {
+        console_log!("{} / {}", progress, duration);
+        let percent = (progress / duration) * 100.0;
+        console_log!("{:.2}%", percent);
+        self.load_percentage_text.set_text_content(Some(format!("{:.2}%", percent).as_str()));
+        self.load_fill.style().set_property("width", format!("{}%", percent).as_str()).unwrap();
+    }
+
+
+    pub fn show_loader(&self) {
+        let class_list = self.overlay.class_list();
+        let _ = class_list.remove_1("load-hidden");
+    }
+
+    pub fn hide_loader(&self) {
+        let class_list = self.overlay.class_list();
+        let _ = class_list.add_1("load-hidden");
+    }
+}

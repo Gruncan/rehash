@@ -1,6 +1,8 @@
 use crate::callback_event;
+use crate::html::html_ui::HtmlLoadBar;
 use crate::tauri::tauri_callback::file_open_closure::FileOpenClosure;
 use crate::tauri::tauri_events::file_open_event::{FileOpenEvent, FileOpenEventCtx};
+use crate::tauri::tauri_events::onload_callback::OnLoadCallback;
 use crate::video::event::{CallbackController, CallbackEvent};
 use crate::video::video_callback::CallbackClosureWrapper;
 use js_sys::Reflect;
@@ -10,7 +12,6 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::HtmlVideoElement;
-
 
 pub(crate) type FileOpenEventCtxType = Arc<Mutex<FileOpenEventCtx>>;
 
@@ -22,10 +23,16 @@ pub(crate) struct FileOpenCallbackController {
 
 
 impl FileOpenCallbackController {
-    pub fn new(video_element: HtmlVideoElement) -> Self {
+    pub fn new(video_element: HtmlVideoElement, load_bar: HtmlLoadBar) -> Self {
         let open_event = callback_event!(FileOpenEvent);
+        let load_callback = Box::new(OnLoadCallback { ctx: load_bar.clone() });
+        let closure = CallbackClosureWrapper::create_callback(load_callback);
+        video_element.set_onloadeddata(Some(closure.as_ref().as_ref().unchecked_ref()));
+
+        closure.forget();
+
         Self {
-            ctx: Arc::new(Mutex::new(FileOpenEventCtx { video_element, video_path: None })),
+            ctx: Arc::new(Mutex::new(FileOpenEventCtx { video_element, video_path: None, load_bar })),
             open_event,
         }
     }

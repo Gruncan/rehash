@@ -2,7 +2,7 @@ use rehash_codec_ffi::RehashCodecLibrary;
 use std::sync::Mutex;
 
 
-const CHUNK_SIZE: usize = 500_000;
+const CHUNK_SIZE: usize = 5_000_000;
 
 pub struct VideoState {
     pub(crate) codec: Mutex<RehashCodecLibrary>,

@@ -5,6 +5,7 @@ mod html;
 mod tauri;
 
 use crate::html::html_callback::HtmlVideoCallbackController;
+use crate::html::html_ui::HtmlLoadBar;
 use crate::prelude::*;
 use crate::prelude::*;
 use crate::tauri::tauri_callback::FileOpenCallbackController;
@@ -84,8 +85,8 @@ async fn init() -> RehashResultUnit {
     let mut callback_controller = HtmlVideoCallbackController::new(video_player.clone(), html_controller);
     callback_controller.register_events();
 
-
-    let mut file_open_controller = FileOpenCallbackController::new(video_element);
+    let html_load_bar = HtmlLoadBar::new(&document);
+    let mut file_open_controller = FileOpenCallbackController::new(video_element, html_load_bar);
     file_open_controller.register_events();
 
     Ok(())
