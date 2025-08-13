@@ -1,0 +1,85 @@
+use js_sys::{Array, Function, Object, Reflect};
+use rehash_utils::errors::RehashResultUnit;
+use rehash_utils::logging::*;
+use rehash_utils::utils::{dynamic_import, set_panic_hook, tauri_read_binary_file, tauri_read_text_file, tauri_resolve_resource};
+use rehash_utils::*;
+use wasm_bindgen::prelude::wasm_bindgen;
+use wasm_bindgen::{JsCast, JsValue};
+
+use web_sys::{Blob, BlobPropertyBag, HtmlElement, Url};
+
+pub const WASM_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+
+async fn load_wasm(name: &str) -> RehashResultUnit {
+    let js_path = format!("pkg/{}.js", name);
+    let wasm_path = format!("pkg/{}_bg.wasm", name);
+
+    let js_path = into_async!(tauri_resolve_resource(js_path.as_str())).await?;
+    // debug_console_log!("Loading frontend JS from: {}", js_path.as_string().unwrap_or("NULL".to_string()));
+
+    let content = into_async!(tauri_read_text_file(js_path.as_string().unwrap().as_str())).await?;
+    let blob_options = BlobPropertyBag::new();
+    blob_options.set_type("application/javascript");
+
+    let array = Array::new();
+    array.push(&content);
+
+    let blob = Blob::new_with_u8_array_sequence_and_options(&array, &blob_options)?;
+
+    let blob_url = Url::create_object_url_with_blob(&blob)?;
+
+    let options = into_object!("baseDir" => 11u16)?;
+
+    let wasm_blob = into_async!(tauri_read_binary_file(wasm_path.as_str(), &options)).await?;
+
+    let module = into_async!(dynamic_import(blob_url.as_str())).await?;
+
+    let init_fn = Reflect::get(&module, &"default".into())?;
+    let init_fn = init_fn.dyn_into::<Function>()?;
+
+    // TODO fix this to that is does not warn about deprecated
+    // using deprecated parameters for the initialization function; pass a single object instead
+    // let obj = Object::new();
+    // Reflect::set(&obj, &JsValue::from_str("bytes"), &wasm_blob)?;
+
+    let _ = init_fn.call1(&JsValue::NULL, &wasm_blob)?;
+
+    Ok(())
+}
+
+
+#[wasm_bindgen(start)]
+pub fn main() {
+    console_log!("Loader version: {}", WASM_VERSION);
+    set_panic_hook();
+
+    #[cfg(debug_assertions)]
+    {
+        let window = web_sys::window().ok_or("Failed to get window").unwrap();
+        let document = window.document().ok_or("Failed to get document").unwrap();
+
+        let debug_version_container = document.get_element_by_id("debug-version-container")
+            .unwrap()
+            .dyn_into::<HtmlElement>().unwrap();
+
+        debug_version_container.style().set_property("display", "block").expect("Failed to display debug versions");
+
+        let version_header = document.get_element_by_id("build-loader")
+            .unwrap()
+            .dyn_into::<HtmlElement>().unwrap();
+
+        version_header.set_text_content(Some(&format!("Build Loader: {}", WASM_VERSION)));
+    }
+
+    wasm_bindgen_futures::spawn_local(async move {
+        match load_wasm("rehash_frontend").await {
+            Ok(_) => {
+                // console_log!("Loaded Rehash frontend");
+            },
+            Err(e) => {
+                error_log!("Error loading rehash frontend: {:?}", e);
+            }
+        }
+    })
+}

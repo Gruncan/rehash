@@ -1,6 +1,6 @@
 [package]
 name = "rehash-desktop"
-version = "0.1.3"
+version = "0.1.5"
 description = "Rehash desktop"
 authors = ["Gruncan"]
 license = ""
@@ -23,3 +23,7 @@ tauri = { version = "2.4.1", features = ["protocol-asset"] }
 tauri-plugin-log = "2.0.0-rc"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+serde = { version = "1.0.219", features = ["derive"] }
+tokio = "1.47.0"
+rehash-utils = { path = "../components/rehash-utils", features = [] }
+rehash-codec-ffi = { path = "../components/rehash-codec/codec-ffi" }

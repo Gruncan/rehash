@@ -1,6 +1,12 @@
 [workspace]
 members = [
     "rehash-desktop",
-    "components/wasm-frontend",
-    "components/wasm-loader"
-    , "components/wasm-bindings-lib"]
+    "components/rehash-frontend",
+    "components/rehash-loader",
+    "components/rehash-utils",
+    "components/rehash-codec/codec",
+    "components/rehash-codec/codec-ffi",
+    "components/rehash-codec/codec-proc-macro"
+]
+
+resolver = "3"

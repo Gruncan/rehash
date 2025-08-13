@@ -15,7 +15,11 @@
         "width": 1920,
         "height": 1080,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "devtools": false,
+        "zoom-hotkeys-enabled": false,
+        "browser-extensions-enabled": false,
+        "label": "main"
       }
     ],
     "security": {
@@ -32,7 +36,8 @@
     "active": true,
     "targets": "all",
     "resources": [
-      "pkg/*"
+      "pkg/*",
+      "codec/*"
     ],
     "icon": [
       "icons/32x32.png",

@@ -1,72 +1,114 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Rehash</title>
     <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1" name="viewport">
-    <link href="style.css" rel="stylesheet">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Video Player</title>
+    <link href="./style.css" rel="stylesheet">
 </head>
 <body>
+<div id="debug-version-container"
+     style="position: fixed; left: 0; right: 0; padding: 10px; z-index: 9999; display: none">
 <h4 id="build-wasm" style="color: white">Build WASM: 0.0.0</h4>
 <h4 id="build-desktop" style="color: white">Build Desktop: 0.0.0</h4>
 <h4 id="build-loader" style="color: white">Build Loader: 0.0.0</h4>
-<div class="video-container">
-    <div class="video-wrapper">
-        <video id="video-player"></video>
+</div>
+
+<div id="load-overlay">
+    <div id="load-container">
+        <div id="load-progress-container">
+            <div id="load-progress-label">
+                <span>Loading...</span>
+                <span id="load-percentage-text">0%</span>
+            </div>
+            <div id="load-progress-bar">
+                <div id="load-progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
     </div>
-    <div class="controls">
-        <!-- Left Controls -->
-        <div class="controls-left">
-            <button class="control-btn" id="prev-clip" title="Previous Clip">
-                <svg class="icon" viewBox="0 0 24 24">
-                    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
-                </svg>
-            </button>
+</div>
 
-            <button class="control-btn" id="rewind" title="Rewind">
-                <svg class="icon" id="rewind-icon" viewBox="0 0 24 24">
-                    <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
-                </svg>
-            </button>
+<div class="video-container">
+    <video id="video-player">
+        <source src="" type="video/mp4">
+    </video>
 
-            <button class="control-btn play-pause" id="play-pause" title="Play/Pause">
-                <svg class="icon icon-large" id="play-icon" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z"/>
-                </svg>
-                <svg class="icon icon-large" id="pause-icon" style="display: none;" viewBox="0 0 24 24">
-                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                </svg>
-            </button>
+    <div class="progress-container" id="progress-container">
+        <div class="progress-dot start-dot" id="start-dot"></div>
+        <div id="progress-bar">
+            <div class="progress-fill-bar" id="progress-fill"></div>
+            <div class="progress-handle" id="progress-handle"></div>
+        </div>
+        <div class="progress-dot end-dot" id="end-dot"></div>
+    </div>
 
-            <button class="control-btn" id="fast-forward" title="Fast Forward">
-                <svg class="icon" id="fast-forward-icon" viewBox="0 0 24 24">
-                    <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>
-                </svg>
-            </button>
+    <div class="controls" id="controls">
+        <button class="control-btn" id="previous">
+            <svg height="16" id="previous-icon" viewBox="0 0 24 24" width="16">
+                <g id="SVGRepo_bgCarrier" stroke-width="0"/>
+                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
+                <g id="SVGRepo_iconCarrier">
+                    <path d="M5 18L5 6M19 6V18L9 12L19 6Z" data-darkreader-inline-stroke="" stroke="#ffffff" stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                          style="--darkreader-inline-stroke: var(--darkreader-text-ffffff, #e8e6e3);"/>
+                </g>
+            </svg>
+        </button>
+        <button class="control-btn" id="rewind">
+            <svg height="16" id="rewind-icon" viewBox="0 0 24 24" width="16">
+                <g id="SVGRepo_bgCarrier" stroke-width="0"/>
+                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
+                <g id="SVGRepo_iconCarrier">
+                    <g>
+                        <path d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M8 7v4L2 6l6-5v4h5a8 8 0 1 1 0 16H4v-2h9a6 6 0 1 0 0-12H8z"/>
+                    </g>
+                </g>
+            </svg>
+        </button>
 
-            <button class="control-btn" id="next-clip" title="Next Clip">
-                <svg class="icon" viewBox="0 0 24 24">
-                    <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
-                </svg>
-            </button>
+        <button class="control-btn" id="play-pause">
+            <svg class="play-icon" height="16" id="play-icon" viewBox="0 0 24 24" width="16">
+                <path d="M8 5v14l11-7z" fill="currentColor"/>
+            </svg>
+            <svg class="pause-icon" height="16" id="pause-icon" style="display: none;" viewBox="0 0 24 24" width="16">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill="currentColor"/>
+            </svg>
+        </button>
+
+        <button class="control-btn" id="fast-forward">
+            <svg height="16" id="fast-forward-icon" viewBox="0 0 24 24" width="16">
+                <g id="SVGRepo_bgCarrier" stroke-width="0"/>
+                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
+                <g id="SVGRepo_iconCarrier">
+                    <g>
+                        <path d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M18.172 7H11a6 6 0 1 0 0 12h9v2h-9a8 8 0 1 1 0-16h7.172l-2.536-2.536L17.05 1.05 22 6l-4.95 4.95-1.414-1.414L18.172 7z"/>
+                    </g>
+                </g>
+            </svg>
+        </button>
+
+        <button class="control-btn" id="next">
+            <svg height="16" viewBox="0 0 24 24" width="16">
+                <g id="SVGRepo_bgCarrier" stroke-width="0"/>
+                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
+                <g id="SVGRepo_iconCarrier">
+                    <path d="M19 6V18M5 18L5 6L15 12L5 18Z" data-darkreader-inline-stroke="" stroke="#ffffff" stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                          style="--darkreader-inline-stroke: var(--darkreader-text-ffffff, #e8e6e3);"/>
+                </g>
+            </svg>
+        </button>
+
+        <div class="time-display" id="time-display">
+            <span id="current-time">00:00:00</span> / <span id="total-time">00:00:00</span>
         </div>
 
-        <!-- Center Controls -->
-        <div class="controls-center">
-            <div class="time-display" id="time-display">
-                <span id="current-time">00:00</span> / <span id="total-time">00:00</span>
-            </div>
 
-            <div class="progress-container">
-                <div class="progress-bar" id="progress-bar">
-                    <div class="progress-fill" id="progress-fill"></div>
-                    <div class="progress-handle" id="progress-handle"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Controls -->
-        <div class="controls-right">
+        <div class="right-controls">
             <div class="volume-container">
                 <button class="control-btn" id="volume-btn" title="Volume">
                     <svg class="icon" id="volume-icon" viewBox="0 0 24 24">
@@ -82,22 +124,36 @@
                 </div>
             </div>
 
-            <button class="control-btn" id="settings" title="Settings">
-                <svg class="icon" id="settings-icon" viewBox="0 0 24 24">
-                    <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+            <button class="control-btn" id="settings">
+                <svg height="16" id="settings-icon" viewBox="0 0 24 24" width="16">
+                    <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+                          fill="currentColor"/>
                 </svg>
             </button>
 
-            <button class="control-btn" id="fullscreen" title="Fullscreen">
-                <svg class="icon" id="fullscreen-icon" viewBox="0 0 24 24">
-                    <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+            <button class="control-btn" id="pip">
+                <svg height="16" viewBox="0 0 24 24" width="16">
+                    <path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"
+                          fill="currentColor"/>
+                </svg>
+            </button>
+
+            <button class="control-btn" id="fullscreen">
+                <svg height="16" id="fullscreen-icon" viewBox="0 0 24 24" width="16">
+                    <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"
+                          fill="currentColor"/>
                 </svg>
             </button>
         </div>
     </div>
 </div>
+<script>
+    document.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+    });
+</script>
 <script type="module">
-    import init from "./rehash_wasm_loader.js"
+    import init from "./rehash_loader.js"
 
     init().catch(console.error);
 </script>

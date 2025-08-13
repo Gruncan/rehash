@@ -1,0 +1,12 @@
+[package]
+name = "rehash-codec"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "rehashcodec"
+crate-type = ["cdylib"]
+
+[dependencies]
+rehash-codec-proc-macro = { path = "../codec-proc-macro" }
+ffmpeg-next = "7.1.0"

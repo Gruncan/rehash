@@ -1,0 +1,2 @@
+[target.'cfg(target_os = "windows")'.env]
+FFMPEG_DIR = { value = ".dependencies\\ffmpeg\\rehash-win64-dep", relative = true }
