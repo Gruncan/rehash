@@ -103,14 +103,14 @@ impl VideoInternal for HtmlVideoPlayerInternal {
         let max_duration = self.max_video_progress.time;
         let min_duration = self.min_video_progress.time;
         debug_console_log!("Time {} | max {} | min {}", time, max_duration, min_duration);
-        if time >= max_duration {
+        if time > max_duration {
             self.video_element.set_current_time(max_duration);
             debug_console_log!("Set to max duration: {}", max_duration);
-        } else if time <= min_duration {
+        } else if time < min_duration {
             self.video_element.set_current_time(min_duration);
             debug_console_log!("Set to min duration: {}", min_duration);
         } else {
-            debug_console_log!("Set to normal");
+            debug_console_log!("Set to normal: {}", time);
             self.video_element.set_current_time(time);
         }
     }
