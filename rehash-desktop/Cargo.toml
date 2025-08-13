@@ -27,3 +27,6 @@ serde = { version = "1.0.219", features = ["derive"] }
 tokio = "1.47.0"
 rehash-utils = { path = "../components/rehash-utils", features = [] }
 rehash-codec-ffi = { path = "../components/rehash-codec/codec-ffi" }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-global-shortcut = "2"

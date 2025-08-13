@@ -1,11 +1,10 @@
 mod interface;
+pub mod codec;
 
 
-struct RehashCodec;
-
-
-impl RehashCodec {
-    pub fn new() {}
+#[cfg(test)]
+pub mod test_support {
+    pub use super::*;
 }
 
 

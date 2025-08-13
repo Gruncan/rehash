@@ -420,12 +420,6 @@ mod keyboard_closure {
     impl CallbackClosureWrapper<web_sys::KeyboardEvent> for KeyboardClosure {
         fn closure(&mut self, event: web_sys::KeyboardEvent) {
             let key = event.key();
-            #[cfg(not(debug_assertions))]
-            {
-                if !self.keyboard_callbacks.contains_key(key.as_str()) {
-                    event.prevent_default();
-                }
-            }
             if let Some(callback_ref) = self.keyboard_callbacks.get(key.as_str()) {
                 let mut callback = callback_ref.borrow_mut();
                 let _ = callback.trigger(&mut self.ctx);

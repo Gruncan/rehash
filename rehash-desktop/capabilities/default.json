@@ -12,6 +12,9 @@
     "fs:allow-read-text-file",
     "fs:allow-read-file",
     "fs:allow-resource-read-recursive",
-    "core:path:default"
+    "core:path:default",
+    "global-shortcut:allow-is-registered",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister"
   ]
 }

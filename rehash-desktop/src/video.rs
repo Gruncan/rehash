@@ -34,13 +34,21 @@ pub struct VideoStreamMeta {
     pub chunk_size: usize,
 }
 
-
 impl VideoStreamMeta {
-    pub fn new(file_path: String, current_position: u64, total_size: u64, chunk_size: usize) -> Self {
-        Self { file_path, current_position, total_size, chunk_size }
+    pub fn new(
+        file_path: String,
+        current_position: u64,
+        total_size: u64,
+        chunk_size: usize,
+    ) -> Self {
+        Self {
+            file_path,
+            current_position,
+            total_size,
+            chunk_size,
+        }
     }
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VideoStreamChunk {
@@ -49,7 +57,6 @@ pub struct VideoStreamChunk {
     pub is_final: bool,
 }
 
-
 impl VideoStreamHandler {
     pub fn new() -> Self {
         Self {
@@ -57,11 +64,16 @@ impl VideoStreamHandler {
         }
     }
 
-    pub async fn create_stream(&self, file_path: String, chunk_size: usize) -> Result<VideoStreamMeta, String> {
-        let file = File::open(file_path.clone()).await.map_err(|e| e.to_string())?;
+    pub async fn create_stream(
+        &self,
+        file_path: String,
+        chunk_size: usize,
+    ) -> Result<VideoStreamMeta, String> {
+        let file = File::open(file_path.clone())
+            .await
+            .map_err(|e| e.to_string())?;
         let metadata = file.metadata().await.map_err(|e| e.to_string())?;
         let len = metadata.len();
-
 
         let meta = VideoStreamMeta::new(file_path, 0, len, chunk_size);
         let context = VideoStreamContext::new(file, meta.clone());
@@ -82,23 +94,20 @@ impl VideoStreamHandler {
 
         let mut buffer = vec![0u8; context.meta.chunk_size];
         match context.file.read(&mut buffer).await {
-            Ok(0) => {
-                Ok(None)
-            }
+            Ok(0) => Ok(None),
             Ok(size) => {
                 let stream_chunk = VideoStreamChunk {
                     bytes: buffer[..size].to_vec(),
                     position: context.meta.current_position,
-                    is_final: context.meta.current_position + size as u64 >= context.meta.total_size,
+                    is_final: context.meta.current_position + size as u64
+                        >= context.meta.total_size,
                 };
 
                 context.update_current_position(size as u64);
                 stream_context.replace(context);
                 Ok(Some(stream_chunk))
             }
-            Err(e) => {
-                Err(e.to_string())
-            }
+            Err(e) => Err(e.to_string()),
         }
     }
 
@@ -106,7 +115,6 @@ impl VideoStreamHandler {
         Ok(())
     }
 }
-
 
 #[derive(serde::Deserialize)]
 struct RangeObject {

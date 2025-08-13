@@ -8,9 +8,10 @@ use tauri::menu::{
     AboutMetadata, Menu, MenuBuilder, MenuItem, MenuItemBuilder, Submenu, SubmenuBuilder,
 };
 use tauri::path::BaseDirectory;
-use tauri::{Emitter, Manager};
+use tauri::{Emitter, Manager, WebviewWindow};
 use tauri::{State, Window};
 use tauri_plugin_dialog::{DialogExt, FileDialogBuilder, FilePath};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 pub const DESKTOP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -35,14 +36,18 @@ fn wasm_error(message: String) {
     eprintln!("[WASM] {}", message);
 }
 
-
 #[tauri::command]
-async fn create_video_stream(stream_handler: State<'_, VideoStreamHandler>, path: String) -> Result<VideoStreamMeta, String> {
+async fn create_video_stream(
+    stream_handler: State<'_, VideoStreamHandler>,
+    path: String,
+) -> Result<VideoStreamMeta, String> {
     stream_handler.create_stream(path, 200).await
 }
 
 #[tauri::command]
-async fn get_chunk(stream_handler: State<'_, VideoStreamHandler>) -> Result<Option<VideoStreamChunk>, String> {
+async fn get_chunk(
+    stream_handler: State<'_, VideoStreamHandler>,
+) -> Result<Option<VideoStreamChunk>, String> {
     stream_handler.read_chunk().await
 }
 
@@ -56,6 +61,7 @@ pub fn run() {
     let video_stream_handler = VideoStreamHandler::new();
 
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -91,18 +97,47 @@ pub fn run() {
                 }
             });
 
+            let window = app
+                .get_webview_window("main")
+                .expect("Failed to get window");
+            let debug_shortcut = Shortcut::new(Some(Modifiers::CONTROL), Code::KeyD);
+            app.handle().plugin(
+                tauri_plugin_global_shortcut::Builder::new().with_handler(move |_app, shortcut, event| {
+                    println!("{:?}", shortcut);
+                    if shortcut == &debug_shortcut {
+                        match event.state() {
+                            ShortcutState::Pressed => {
+                                println!("Opening devtools");
+                                window.open_devtools();
+                            },
+                            _ => {}
+                        }
+                    }
+                }).build()
+            )?;
+
+            app.global_shortcut().register(debug_shortcut)?;
+
             Ok(())
         })
         .manage(video_stream_handler)
-        .invoke_handler(tauri::generate_handler![wasm_log, get_desktop_build, wasm_error, create_video_stream, get_chunk])
+        .invoke_handler(tauri::generate_handler![
+            wasm_log,
+            get_desktop_build,
+            wasm_error,
+            create_video_stream,
+            get_chunk
+        ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
 
-
-    if let Ok(path) = app.path().resolve(format!("codec/{}", CODEC_NAME), BaseDirectory::Resource) {
+    if let Ok(path) = app
+        .path()
+        .resolve(format!("codec/{}", CODEC_NAME), BaseDirectory::Resource)
+    {
         let rehash_codec = RehashCodecLibrary::new(&path.to_str().unwrap());
         rehash_codec.print_codec_version();
-        rehash_codec.run_codec_test();
+        // rehash_codec.run_codec_test();
     }
 
     app.run(|_app_handle, _event| {});
