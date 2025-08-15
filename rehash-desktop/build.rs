@@ -15,7 +15,10 @@ fn main() {
 
     if let Ok(shared_object_abs) = shared_object_abs_res {
         println!("cargo:rerun-if-changed={}", shared_object_abs.display());
-
+        let directory = Path::new("codec/").canonicalize().unwrap();
+        if !directory.exists() {
+            fs::create_dir_all(&directory).expect("Failed to create directory.");
+        }
         let d = format!("codec/{}", CODEC_NAME);
         let dest = Path::new(d.as_str());
         if !shared_object_abs.exists() {
