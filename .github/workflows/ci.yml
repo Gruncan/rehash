@@ -121,7 +121,9 @@ jobs:
           name: wasm_frontend
 
       - name: Create dir
-        run: mkdir rehash-desktop/pkg/
+        run: |
+          mkdir rehash-desktop/pkg/
+          mkdir rehash-desktop/codec/
 
       - name: Move artifacts
         run: mv *.d.ts *.wasm *.js rehash-desktop/pkg/
