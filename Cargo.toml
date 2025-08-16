@@ -6,7 +6,8 @@ members = [
     "components/rehash-utils",
     "components/rehash-codec/codec",
     "components/rehash-codec/codec-ffi",
-    "components/rehash-codec/codec-proc-macro"
+    "components/rehash-codec/codec-proc-macro",
+    "rehash-desktop/rehash-win-installer"
 ]
 
 resolver = "3"

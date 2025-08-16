@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Fragment>
+        <Binary Id="RehashInstaller" SourceFile="RehashInstaller.dll"/>
+        
+        <CustomAction Id="SetRehashInstallDirectory" property="RehashInstallDirectory" value="[INSTALLFOLDER]"/>
+        
+        <CustomAction Id="RehashInstallDependency" BinaryKey="DependencyInstaller" 
+                            DllEntry="DownloadRehashDependency" Execute="deferred" 
+                            Impersonate="no" Return="check"/>
+        <InstallExecuteSequence>
+            <Custom Action="SetRehashInstallDirectory" Before="RehashInstallDependency">NOT Installed and not removed</Custom>
+            <Custom Action="RehashInstallDependency" After="InstallFiles">NOT Installed and not removed</Custom>
+        </InstallExecuteSequence>
+    </Fragment>
+</Wix>
