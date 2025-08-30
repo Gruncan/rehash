@@ -54,9 +54,9 @@ impl HtmlVideoCallbackController {
 
         let keyboard_events: HashMap<KeyControlType, Event> = HashMap::from([
             (Rc::from("Space"), play_pause_event.clone()),
-            (Rc::from("m"), mute_unmute_event.clone()),
-            (Rc::from("v"), fast_forward_event.clone()),
-            (Rc::from("z"), rewind_event.clone()),
+            (Rc::from("KeyM"), mute_unmute_event.clone()),
+            (Rc::from("KeyV"), fast_forward_event.clone()),
+            (Rc::from("KeyZ"), rewind_event.clone()),
             (Rc::from("ArrowUp"), playback_increase.clone()),
             (Rc::from("ArrowDown"), playback_decrease.clone()),
         ]);
@@ -419,7 +419,7 @@ mod keyboard_closure {
 
     impl CallbackClosureWrapper<web_sys::KeyboardEvent> for KeyboardClosure {
         fn closure(&mut self, event: web_sys::KeyboardEvent) {
-            let key = event.key();
+            let key = event.code();
             #[cfg(not(debug_assertions))]
             {
                 if !self.keyboard_callbacks.contains_key(key.as_str()) {

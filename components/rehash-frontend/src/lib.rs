@@ -81,6 +81,7 @@ async fn init() -> RehashResultUnit {
     let html_controller = HtmlVideoUIController::new(document.clone());
     let video_player = create_shared_video_player(Rc::new(html_controller), video_element.clone());
 
+    // TODO why?
     let html_controller = HtmlVideoUIController::new(document.clone());
     let mut callback_controller = HtmlVideoCallbackController::new(video_player.clone(), html_controller);
     callback_controller.register_events();
